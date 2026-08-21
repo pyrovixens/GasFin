@@ -98,11 +98,11 @@
       });
 
       const [userName, setUserName] = useState(() => {
-        return localStorage.getItem('gf_user_name_v5') || 'Gustavo';
+        return localStorage.getItem('gf_user_name_v5') || '';
       });
 
       const [tempInputName, setTempInputName] = useState(() => {
-        return localStorage.getItem('gf_user_name_v5') || 'Gustavo';
+        return localStorage.getItem('gf_user_name_v5') || '';
       });
 
       const [isCurrencySetupOpen, setIsCurrencySetupOpen] = useState(() => {
@@ -404,16 +404,16 @@
                 <div className="text-center space-y-1 mb-5">
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">¡Bienvenido a GastFin!</span>
                   <h2 className="text-2xl font-black text-white mt-1">¿Cómo quieres que te llamemos?</h2>
-                  <p className="text-xs text-slate-300">Personalizaremos tus dashboards, métricas y reportes con tu nombre o empresa.</p>
+                  <p className="text-xs text-slate-300">Personalizaremos tus dashboards, métricas y reportes con tu alias o nombre.</p>
                 </div>
                 
-                <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/90 mb-4 space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-200">Tu Nombre o Nombre de tu Proyecto / Empresa:</label>
+                <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 mb-4">
+                  <label className="block text-xs font-bold text-slate-200 mb-1.5">¿Cuál es tu Alias o Nombre?</label>
                   <input
                     type="text"
                     required
                     autoFocus
-                    placeholder="Ej: Carlos, María, Innova Tech, Mi Negocio..."
+                    placeholder="Ingresa tu alias o nombre aquí..."
                     value={tempInputName}
                     onChange={(e) => setTempInputName(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-emerald-500"

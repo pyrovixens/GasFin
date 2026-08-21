@@ -2,6 +2,7 @@ import React from 'react';
 import { useFinancial } from './context/FinancialContext';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
+import { BottomNavBar } from './components/BottomNavBar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
 import { DebtCalculatorView } from './components/DebtCalculatorView';
@@ -41,7 +42,7 @@ export const AppContent: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Expandable Left Sidebar */}
+      {/* Responsive Left Sidebar */}
       <Sidebar />
 
       {/* Main Content Viewport */}
@@ -49,13 +50,16 @@ export const AppContent: React.FC = () => {
         {/* Sticky Executive Navbar */}
         <Navbar />
 
-        {/* Dynamic View Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        {/* Dynamic View Content with Mobile Bottom Padding */}
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           {renderActiveView()}
         </main>
       </div>
 
-      {/* Floating Non-Blocking Transaction Window */}
+      {/* Mobile Bottom Navigation Bar */}
+      <BottomNavBar />
+
+      {/* Floating / Responsive Transaction Window */}
       <TransactionModal />
 
       {/* Modals & Dialogs */}

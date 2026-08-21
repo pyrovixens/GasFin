@@ -11,7 +11,8 @@ import {
   ChevronRight, 
   ShieldAlert,
   Sparkles,
-  Building2
+  Building2,
+  X
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { ActiveView } from '../types';
@@ -73,148 +74,178 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
+  const handleSelectView = (view: ActiveView) => {
+    setActiveView(view);
+    // On mobile, auto-close sidebar drawer when navigating
+    if (window.innerWidth < 768) {
+      setIsSidebarCollapsed(true);
+    }
+  };
+
   return (
-    <aside 
-      className={`relative flex flex-col bg-slate-900/95 dark:bg-slate-950/95 border-r border-slate-800 backdrop-blur-xl transition-all duration-300 ease-in-out z-30 select-none ${
-        isSidebarCollapsed ? 'w-20' : 'w-72'
-      }`}
-    >
-      {/* Brand Header */}
-      <div className="flex items-center justify-between h-20 px-5 border-b border-slate-800/80">
-        <div className="flex items-center gap-3 overflow-hidden cursor-pointer" onClick={() => setActiveView('dashboard')}>
-          <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 shadow-glow-emerald text-white font-bold text-xl flex-shrink-0">
-            GF
-          </div>
-          {!isSidebarCollapsed && (
-            <div className="flex flex-col min-w-0 transition-opacity duration-200">
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-xl tracking-tight text-white">
-                  Gast<span className="text-emerald-400">Fin</span>
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  PRO
-                </span>
-              </div>
-              <span className="text-xs text-slate-400 truncate">Control Financiero Inteligente</span>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {!isSidebarCollapsed && (
+        <div 
+          onClick={() => setIsSidebarCollapsed(true)}
+          className="md:hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm animate-fade-in"
+        />
+      )}
+
+      {/* Sidebar Container: Drawer on mobile/tablet, Fixed side on desktop */}
+      <aside 
+        className={`fixed md:relative inset-y-0 left-0 flex flex-col bg-slate-900/95 dark:bg-slate-950/95 border-r border-slate-800 backdrop-blur-xl transition-all duration-300 ease-in-out z-50 select-none ${
+          // Mobile state
+          isSidebarCollapsed 
+            ? '-translate-x-full md:translate-x-0 md:w-20' 
+            : 'translate-x-0 w-72 md:w-72'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="flex items-center justify-between h-20 px-5 border-b border-slate-800/80">
+          <div className="flex items-center gap-3 overflow-hidden cursor-pointer" onClick={() => handleSelectView('dashboard')}>
+            <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 shadow-glow-emerald text-white font-bold text-xl flex-shrink-0">
+              GF
             </div>
-          )}
+            {(!isSidebarCollapsed || window.innerWidth < 768) && (
+              <div className="flex flex-col min-w-0 transition-opacity duration-200">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-xl tracking-tight text-white">
+                    Gast<span className="text-emerald-400">Fin</span>
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    PRO
+                  </span>
+                </div>
+                <span className="text-xs text-slate-400 truncate">Control Financiero Inteligente</span>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Collapse Toggle Button */}
+          <button
+            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            title={isSidebarCollapsed ? 'Expandir Menú' : 'Colapsar Menú'}
+            className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/50 transition-colors"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+          </button>
+
+          {/* Mobile Close Button */}
+          <button
+            onClick={() => setIsSidebarCollapsed(true)}
+            className="flex md:hidden items-center justify-center w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Collapse Toggle Button */}
-        <button
-          onClick={() => setIsSidebarCollapsed(prev => !prev)}
-          title={isSidebarCollapsed ? 'Expandir Menú' : 'Colapsar Menú'}
-          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/50 transition-colors"
-        >
-          {isSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-        </button>
-      </div>
+        {/* Deficit Alert Warning Pill in Sidebar */}
+        {metrics.isDeficit && (
+          <div className="px-3 pt-3">
+            <div className={`flex items-center gap-2 p-2.5 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 shadow-glow-rose animate-pulse-subtle ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center' : ''}`}>
+              <ShieldAlert className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              {(!isSidebarCollapsed || window.innerWidth < 768) && (
+                <div className="text-xs">
+                  <p className="font-bold text-rose-200">Déficit Detectado</p>
+                  <p className="text-[11px] text-rose-300/80">Gastos superan ingresos</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
-      {/* Deficit Alert Warning Pill in Sidebar */}
-      {metrics.isDeficit && (
-        <div className="px-3 pt-3">
-          <div className={`flex items-center gap-2 p-2.5 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 shadow-glow-rose animate-pulse-subtle ${isSidebarCollapsed ? 'justify-center' : ''}`}>
-            <ShieldAlert className="w-5 h-5 text-rose-400 flex-shrink-0" />
-            {!isSidebarCollapsed && (
-              <div className="text-xs">
-                <p className="font-bold text-rose-200">Déficit Detectado</p>
-                <p className="text-[11px] text-rose-300/80">Gastos superan ingresos</p>
+        {/* Navigation List */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleSelectView(item.id)}
+                title={isSidebarCollapsed ? item.label : undefined}
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-200 group relative ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm font-bold'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                } ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center px-0' : ''}`}
+              >
+                <Icon 
+                  className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
+                    isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-200'
+                  }`} 
+                />
+                
+                {(!isSidebarCollapsed || window.innerWidth < 768) && (
+                  <div className="flex items-center justify-between flex-1 min-w-0">
+                    <span className="truncate">{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Active Indicator Bar */}
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-r-full" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Quick Currency in Sidebar */}
+        {(!isSidebarCollapsed || window.innerWidth < 768) && (
+          <div className="px-4 pb-3">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-emerald-950/30 border border-indigo-500/20">
+              <div className="flex items-center gap-2 mb-1.5 text-indigo-300 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Salud Financiera</span>
+              </div>
+              <p className="text-xs text-slate-300 mb-2.5">
+                {metrics.isDeficit 
+                  ? 'Prioriza reducir costos no esenciales en el Asesor IA.'
+                  : `Tasa de ahorro saludable: ${metrics.savingsRate.toFixed(1)}% este mes.`}
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                <span>Moneda:</span>
+                <select
+                  value={currentCurrency.code}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="bg-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 border border-slate-700 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="MXN">MXN ($)</option>
+                  <option value="COP">COP ($)</option>
+                  <option value="CLP">CLP ($)</option>
+                  <option value="PEN">PEN (S/)</option>
+                  <option value="ARS">ARS ($)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Organization / Profile Footer */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
+          <div className={`flex items-center gap-3 ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center' : ''}`}>
+            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 flex-shrink-0">
+              <Building2 size={20} className="text-emerald-400" />
+            </div>
+            {(!isSidebarCollapsed || window.innerWidth < 768) && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-white truncate">GastFin Pro</p>
+                <p className="text-[11px] text-slate-400 truncate">suite@gastfin.app</p>
               </div>
             )}
           </div>
         </div>
-      )}
-
-      {/* Navigation List */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              title={isSidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-200 group relative ${
-                isActive
-                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-              } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
-            >
-              <Icon 
-                className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                  isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-200'
-                }`} 
-              />
-              
-              {!isSidebarCollapsed && (
-                <div className="flex items-center justify-between flex-1 min-w-0">
-                  <span className="truncate">{item.label}</span>
-                  {item.badge && (
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Active Indicator Bar */}
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-r-full" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Motivational Card / Quick Currency in Sidebar */}
-      {!isSidebarCollapsed && (
-        <div className="px-4 pb-3">
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-emerald-950/30 border border-indigo-500/20">
-            <div className="flex items-center gap-2 mb-1.5 text-indigo-300 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Salud Financiera</span>
-            </div>
-            <p className="text-xs text-slate-300 mb-2.5">
-              {metrics.isDeficit 
-                ? 'Prioriza reducir costos no esenciales en el Asesor IA.'
-                : `Tasa de ahorro saludable: ${metrics.savingsRate.toFixed(1)}% este mes.`}
-            </p>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
-              <span>Moneda:</span>
-              <select
-                value={currentCurrency.code}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="bg-slate-800 text-slate-200 text-xs rounded-lg px-2 py-1 border border-slate-700 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="MXN">MXN ($)</option>
-                <option value="COP">COP ($)</option>
-                <option value="CLP">CLP ($)</option>
-                <option value="PEN">PEN (S/)</option>
-                <option value="ARS">ARS ($)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Organization / Profile Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
-        <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 flex-shrink-0">
-            <Building2 size={20} className="text-emerald-400" />
-          </div>
-          {!isSidebarCollapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white truncate">Corporativo Global</p>
-              <p className="text-[11px] text-slate-400 truncate">gastfin@empresa.com</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };

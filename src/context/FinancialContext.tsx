@@ -126,7 +126,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // User name
   const [userName, setUserNameState] = useState<string>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USER_NAME);
-    return saved || 'Gustavo';
+    return saved || '';
   });
 
   const setUserName = (name: string) => {

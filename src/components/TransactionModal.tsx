@@ -255,15 +255,18 @@ export const TransactionModal: React.FC = () => {
     );
   }
 
-  const windowStyle: React.CSSProperties = position 
-    ? { left: `${position.x}px`, top: `${position.y}px`, position: 'fixed' }
-    : { bottom: '24px', right: '24px', position: 'fixed' };
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const windowStyle: React.CSSProperties = isMobile
+    ? { bottom: '0px', left: '0px', right: '0px', width: '100%', position: 'fixed', maxHeight: '90vh' }
+    : (position 
+        ? { left: `${position.x}px`, top: `${position.y}px`, position: 'fixed' }
+        : { bottom: '24px', right: '24px', position: 'fixed' });
 
   return (
     <div 
       id="floating-tx-window"
       style={windowStyle}
-      className="z-40 w-[94vw] sm:w-[430px] max-h-[88vh] bg-slate-900/95 border-2 border-emerald-500/50 rounded-3xl shadow-2xl backdrop-blur-2xl animate-slide-up flex flex-col overflow-hidden text-slate-100 ring-1 ring-white/10"
+      className={`z-40 ${isMobile ? 'rounded-t-3xl border-t-2' : 'w-[94vw] sm:w-[430px] rounded-3xl border-2'} max-h-[90vh] bg-slate-900/98 border-emerald-500/50 shadow-2xl backdrop-blur-2xl animate-slide-up flex flex-col overflow-hidden text-slate-100 ring-1 ring-white/10`}
     >
       {/* Draggable Header */}
       <div 

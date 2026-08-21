@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, Check, Sparkles, User, ArrowRight, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Coins, Sparkles, User, ArrowRight } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../data/initialData';
 
@@ -11,23 +11,24 @@ export const CurrencySetupModal: React.FC = () => {
     lockAndSetCurrencyAndName 
   } = useFinancial();
 
-  const [inputName, setInputName] = useState(userName || 'Gustavo');
+  // Clean empty input for first launch
+  const [inputName, setInputName] = useState(userName || '');
   const [selectedCurrencyCode, setSelectedCurrencyCode] = useState(currentCurrency.code);
 
   if (!isCurrencySetupModalOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = inputName.trim() || 'Emprendedor';
+    const finalName = inputName.trim() || 'Usuario';
     lockAndSetCurrencyAndName(selectedCurrencyCode, finalName);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in">
-      <div className="relative w-full max-w-xl bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-950/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-emerald-950/50 my-auto">
         
         {/* Top Badge & Header */}
-        <div className="text-center space-y-2 mb-6">
+        <div className="text-center space-y-2 mb-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
             <Sparkles size={14} className="text-emerald-400" />
             <span>¡Bienvenido a GastFin!</span>
@@ -38,23 +39,23 @@ export const CurrencySetupModal: React.FC = () => {
           </h2>
 
           <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-            Personalizaremos tus dashboards ejecutivos, métricas y reportes con tu nombre o el de tu empresa.
+            Ingresa tu alias o nombre para personalizar tus dashboards, reportes y métricas financieras.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
-          {/* Large Name Input Box */}
+          {/* Alias / Name Input Box */}
           <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/90 space-y-2">
             <label className="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <User size={15} className="text-emerald-400" />
-              <span>Tu Nombre o Nombre de tu Proyecto / Empresa:</span>
+              <span>¿Cuál es tu Alias o Nombre?</span>
             </label>
             <input
               type="text"
               required
               autoFocus
-              placeholder="Ej: Carlos, María, Innova Tech, Mi Negocio..."
+              placeholder="Ingresa tu alias o nombre aquí..."
               value={inputName}
               onChange={(e) => setInputName(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-slate-950/90 border border-slate-700 text-white font-black text-base placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
@@ -66,12 +67,12 @@ export const CurrencySetupModal: React.FC = () => {
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-bold text-slate-300 flex items-center gap-1.5">
                 <Coins size={15} className="text-amber-400" />
-                <span>¿En qué divisa principal prefieres trabajar?</span>
+                <span>¿En qué divisa prefieres trabajar?</span>
               </label>
               <span className="text-[11px] text-slate-400 font-semibold">Formato con puntos</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
               {SUPPORTED_CURRENCIES.map((curr) => {
                 const isSelected = selectedCurrencyCode === curr.code;
                 return (
@@ -89,7 +90,7 @@ export const CurrencySetupModal: React.FC = () => {
                       <span className="font-extrabold text-sm text-white">{curr.code} ({curr.symbol})</span>
                       <span className="text-[11px] font-semibold text-slate-400">{curr.country}</span>
                     </div>
-                    <div className="mt-1.5 pt-1.5 border-t border-slate-700/50 flex items-center justify-between text-[11px]">
+                    <div className="mt-1 pt-1 border-t border-slate-700/50 flex items-center justify-between text-[11px]">
                       <span className="text-slate-400">Ejemplo:</span>
                       <span className="font-mono font-bold text-emerald-400">{curr.example}</span>
                     </div>
@@ -100,7 +101,7 @@ export const CurrencySetupModal: React.FC = () => {
           </div>
 
           {/* Submit Action Button */}
-          <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="text-[11px] text-slate-400 text-center sm:text-left">
               🔒 Tus datos se guardan de forma privada en tu navegador.
             </span>
