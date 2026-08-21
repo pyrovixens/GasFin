@@ -54,10 +54,10 @@ export const SavingsAdvisorView: React.FC = () => {
   // 1. DYNAMIC AUDIT OF REAL USER TRANSACTIONS
   // ==========================================
 
-  // Total Real Income & Expenses
+  // Total Real Income & Expenses (No artificial defaults)
   const realIncome = metrics.totalIncome;
   const realExpense = metrics.totalExpense;
-  const baseIncome = realIncome > 0 ? realIncome : (realExpense > 0 ? realExpense * 1.2 : 1200000);
+  const baseIncome = realIncome;
 
   // Categorize Real Expenses into 50/30/20 buckets
   const realExpensesAudit = useMemo(() => {
@@ -426,11 +426,27 @@ export const SavingsAdvisorView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 p-2 rounded-2xl bg-slate-800/60 border border-slate-700">
+          <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-slate-800/60 border border-slate-700">
             <span className="text-xs text-slate-400">Base Mensual:</span>
-            <span className="font-extrabold text-sm text-emerald-400 font-mono">{formatMoney(baseIncome)}</span>
+            <span className={`font-extrabold text-sm font-mono ${baseIncome > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {formatMoney(baseIncome)}
+            </span>
+            {baseIncome === 0 && (
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Esperando ingresos
+              </span>
+            )}
           </div>
         </div>
+
+        {baseIncome === 0 && (
+          <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/70 text-xs text-slate-300 flex items-center gap-2">
+            <Sparkles size={16} className="text-emerald-400 flex-shrink-0" />
+            <span>
+              Aún no tienes ingresos registrados. En cuanto ingreses tu sueldo o cobros, la <strong>Regla 50/30/20</strong> calculará automáticamente tus presupuestos ideales de Necesidades (50%), Deseos (30%) y Ahorro (20%).
+            </span>
+          </div>
+        )}
 
         {/* 3 Categories Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

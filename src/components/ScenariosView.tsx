@@ -31,17 +31,13 @@ import { useFinancial } from '../context/FinancialContext';
 export const ScenariosView: React.FC = () => {
   const { metrics, formatMoney, transactions, debts, goals, currentCurrency } = useFinancial();
 
-  // Extract Salary / Incomes and Expenses from real data if present
+  // Extract Salary / Incomes and Expenses strictly from real data
   const salaryFromData = useMemo(() => {
-    const salaryTx = transactions.filter(t => t.type === 'income' && t.category.toLowerCase().includes('sueldo'));
-    if (salaryTx.length > 0) {
-      return salaryTx.reduce((acc, t) => acc + t.amount, 0);
-    }
-    return metrics.totalIncome > 0 ? metrics.totalIncome : 1200000;
-  }, [transactions, metrics.totalIncome]);
+    return metrics.totalIncome;
+  }, [metrics.totalIncome]);
 
   const expenseFromData = useMemo(() => {
-    return metrics.totalExpense > 0 ? metrics.totalExpense : 850000;
+    return metrics.totalExpense;
   }, [metrics.totalExpense]);
 
   // User can adjust or use real data
@@ -51,10 +47,10 @@ export const ScenariosView: React.FC = () => {
   // Target savings goal percentage slider (e.g. want to save 20%, 25%, 35% of salary)
   const [targetSavingsPct, setTargetSavingsPct] = useState<number>(25);
 
-  // Sync if data changes
+  // Sync strictly with real data changes
   useEffect(() => {
-    if (metrics.totalIncome > 0) setUserSalary(metrics.totalIncome);
-    if (metrics.totalExpense > 0) setUserExpense(metrics.totalExpense);
+    setUserSalary(metrics.totalIncome);
+    setUserExpense(metrics.totalExpense);
   }, [metrics.totalIncome, metrics.totalExpense]);
 
   // Current real state
