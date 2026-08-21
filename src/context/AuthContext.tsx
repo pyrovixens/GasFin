@@ -272,6 +272,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setCurrentUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEYS.CURRENT_USER);
+    setIsAuthModalOpen(true);
   };
 
   // Switch Account
