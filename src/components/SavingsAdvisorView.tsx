@@ -8,13 +8,18 @@ import {
   Zap, 
   Filter, 
   Plus, 
-  DollarSign, 
   ArrowRight,
   PieChart as PieChartIcon,
   AlertTriangle,
   Flame,
   Check,
-  Calculator
+  Calculator,
+  RefreshCw,
+  Target,
+  CreditCard,
+  Building2,
+  TrendingDown,
+  Clock
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SavingsTip } from '../types';
@@ -30,6 +35,7 @@ export const SavingsAdvisorView: React.FC = () => {
     goals,
     debts,
     setActiveView,
+    openGoalModal,
     currentCurrency
   } = useFinancial();
 
@@ -37,22 +43,205 @@ export const SavingsAdvisorView: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
-  // Manual Income slider for 50/30/20 simulation if transactions are empty or for planning
-  const [simulatedIncome, setSimulatedIncome] = useState<number>(() => {
-    return metrics.totalIncome > 0 ? metrics.totalIncome : 1200000;
-  });
-
   // New Custom Tip Form
   const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState('Suscripciones & Streaming');
+  const [newCategory, setNewCategory] = useState('Suscripciones & Servicios');
   const [newDescription, setNewDescription] = useState('');
   const [newMonthly, setNewMonthly] = useState('');
   const [newDifficulty, setNewDifficulty] = useState<'easy' | 'medium' | 'high'>('easy');
 
-  // Total potential savings
+  // ==========================================
+  // 1. DYNAMIC AUDIT OF REAL USER TRANSACTIONS
+  // ==========================================
+
+  // Total Real Income & Expenses
+  const realIncome = metrics.totalIncome;
+  const realExpense = metrics.totalExpense;
+  const baseIncome = realIncome > 0 ? realIncome : (realExpense > 0 ? realExpense * 1.2 : 1200000);
+
+  // Categorize Real Expenses into 50/30/20 buckets
+  const realExpensesAudit = useMemo(() => {
+    const expenseList = transactions.filter(t => t.type === 'expense');
+
+    let needsAmount = 0;
+    let wantsAmount = 0;
+    const catMap: Record<string, number> = {};
+    let recurringAmount = 0;
+
+    const needsKeywords = ['vivienda', 'arriendo', 'dividendo', 'luz', 'agua', 'gas', 'servicios', 'supermercado', 'salud', 'transporte', 'educacion', 'comida basica'];
+
+    expenseList.forEach(t => {
+      const catLower = (t.category || '').toLowerCase();
+      const descLower = (t.description || '').toLowerCase();
+
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount;
+
+      if (t.isRecurring || catLower.includes('suscrip') || catLower.includes('streaming') || descLower.includes('netflix') || descLower.includes('spotify') || descLower.includes('gimnasio')) {
+        recurringAmount += t.amount;
+      }
+
+      const isNeed = needsKeywords.some(k => catLower.includes(k) || descLower.includes(k));
+      if (isNeed) {
+        needsAmount += t.amount;
+      } else {
+        wantsAmount += t.amount;
+      }
+    });
+
+    const sortedCategories = Object.entries(catMap)
+      .map(([name, amount]) => ({
+        name,
+        amount,
+        pctOfTotal: realExpense > 0 ? (amount / realExpense) * 100 : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const highestCategory = sortedCategories[0] || null;
+
+    // Real Percentages vs Income
+    const realNeedsPct = baseIncome > 0 ? (needsAmount / baseIncome) * 100 : 0;
+    const realWantsPct = baseIncome > 0 ? (wantsAmount / baseIncome) * 100 : 0;
+    const realSavingsPct = baseIncome > 0 ? Math.max(0, (metrics.netCashFlow / baseIncome) * 100) : 0;
+
+    return {
+      needsAmount,
+      wantsAmount,
+      recurringAmount,
+      sortedCategories,
+      highestCategory,
+      realNeedsPct,
+      realWantsPct,
+      realSavingsPct
+    };
+  }, [transactions, realExpense, baseIncome, metrics.netCashFlow]);
+
+  // Ideal 50/30/20 targets
+  const budget503020 = useMemo(() => {
+    return {
+      needs50: baseIncome * 0.50,
+      wants30: baseIncome * 0.30,
+      savings20: baseIncome * 0.20,
+    };
+  }, [baseIncome]);
+
+  // ====================================================
+  // 2. DYNAMIC AI PROPOSALS BASED ON REAL DATA CHANGES
+  // ====================================================
+  const dynamicAiProposals = useMemo(() => {
+    const proposals: Array<{
+      id: string;
+      title: string;
+      category: string;
+      description: string;
+      impactMonthly: number;
+      impactAnnual: number;
+      urgency: 'alta' | 'media' | 'optimizacion';
+      icon: any;
+      actionText?: string;
+      onAction?: () => void;
+    }> = [];
+
+    // Proposal 1: Highest spending category optimization
+    if (realExpensesAudit.highestCategory && realExpensesAudit.highestCategory.amount > 0) {
+      const topCat = realExpensesAudit.highestCategory;
+      const suggestedCut = Math.round(topCat.amount * 0.12); // 12% optimization
+      proposals.push({
+        id: 'top-cat-proposal',
+        title: `Optimización en ${topCat.name} (Gasto Mayor)`,
+        category: topCat.name,
+        description: `Representa el ${topCat.pctOfTotal.toFixed(0)}% de todos tus egresos (${formatMoney(topCat.amount)}). Reducir un 12% mediante cotizaciones o compras mayoristas liberará capital inmediatamente.`,
+        impactMonthly: suggestedCut,
+        impactAnnual: suggestedCut * 12,
+        urgency: topCat.pctOfTotal > 35 ? 'alta' : 'media',
+        icon: TrendingDown,
+      });
+    }
+
+    // Proposal 2: Recurring payments / Subscriptions leak
+    if (realExpensesAudit.recurringAmount > 0) {
+      const recPotential = Math.round(realExpensesAudit.recurringAmount * 0.30); // 30% cut on unused services
+      proposals.push({
+        id: 'recurring-leak-proposal',
+        title: `Auditoría de Suscripciones y Pagos Fijos`,
+        category: 'Suscripciones & Servicios',
+        description: `Tienes ${formatMoney(realExpensesAudit.recurringAmount)}/mes en cobros recurrentes (${formatMoney(realExpensesAudit.recurringAmount * 12)} al año). Cancelar servicios poco usados o migrar a planes familiares ahorra hasta un 30%.`,
+        impactMonthly: recPotential,
+        impactAnnual: recPotential * 12,
+        urgency: 'media',
+        icon: RefreshCw,
+      });
+    }
+
+    // Proposal 3: Wants / Flexible Spending exceeds 30%
+    if (realExpensesAudit.realWantsPct > 30) {
+      const wantsOverload = Math.round(realExpensesAudit.wantsAmount - budget503020.wants30);
+      proposals.push({
+        id: 'wants-overload-proposal',
+        title: `Ajuste en Gastos Flexibles y Deseos`,
+        category: 'Ocio & Gastos Variables',
+        description: `Tus gastos no esenciales representan el ${realExpensesAudit.realWantsPct.toFixed(0)}% del ingreso (ideal máximo 30%). Moderar compras de impulso y salidas puede recuperar hasta ${formatMoney(wantsOverload > 0 ? wantsOverload : budget503020.wants30 * 0.15)} al mes.`,
+        impactMonthly: wantsOverload > 0 ? wantsOverload : Math.round(budget503020.wants30 * 0.15),
+        impactAnnual: (wantsOverload > 0 ? wantsOverload : Math.round(budget503020.wants30 * 0.15)) * 12,
+        urgency: 'alta',
+        icon: Flame,
+      });
+    }
+
+    // Proposal 4: Deficit Emergency Plan OR Surplus Accelerator
+    if (metrics.isDeficit) {
+      proposals.push({
+        id: 'deficit-recovery-plan',
+        title: `Plan de Choque por Déficit de Caja`,
+        category: 'Urgencia Financiera',
+        description: `Tus egresos superan tus ingresos por ${formatMoney(metrics.deficitAmount)}. Se recomienda congelar compras extraordinarias y transferir el balance a equilibrio.`,
+        impactMonthly: metrics.deficitAmount,
+        impactAnnual: metrics.deficitAmount * 12,
+        urgency: 'alta',
+        icon: AlertTriangle,
+      });
+    } else if (metrics.netCashFlow > 0) {
+      const investSurplus = Math.round(metrics.netCashFlow * 0.50);
+      proposals.push({
+        id: 'surplus-accelerator-plan',
+        title: `Inyección Automática a Metas y Fondos`,
+        category: 'Crecimiento de Capital',
+        description: `Cuentas con un superávit mensual de ${formatMoney(metrics.netCashFlow)}. Programar el 50% (${formatMoney(investSurplus)}) hacia tus Metas Financieras acelerará tu libertad financiera.`,
+        impactMonthly: investSurplus,
+        impactAnnual: investSurplus * 12,
+        urgency: 'optimizacion',
+        icon: Target,
+        actionText: '+ Crear Meta',
+        onAction: () => openGoalModal(),
+      });
+    }
+
+    // Proposal 5: Debt Snowball Opportunity if debts exist
+    if (debts.length > 0 && metrics.netCashFlow > 0) {
+      const topDebt = [...debts].sort((a, b) => (b.interestRate || 0) - (a.interestRate || 0))[0];
+      const extraPayment = Math.round(metrics.netCashFlow * 0.30);
+      proposals.push({
+        id: 'debt-avalanche-proposal',
+        title: `Amortización Acelerada de Deuda: ${topDebt.creditor}`,
+        category: 'Deudas & Créditos',
+        description: `Tu deuda con mayor costo es ${topDebt.creditor} (${topDebt.interestRate || 0}% interés). Destinar un abono extra de ${formatMoney(extraPayment)} al mes reducirá meses de intereses.`,
+        impactMonthly: extraPayment,
+        impactAnnual: extraPayment * 12,
+        urgency: 'optimizacion',
+        icon: CreditCard,
+        actionText: 'Ver Deudas',
+        onAction: () => setActiveView('debts'),
+      });
+    }
+
+    return proposals;
+  }, [realExpensesAudit, metrics, debts, budget503020, formatMoney, openGoalModal, setActiveView]);
+
+  // Combined totals of all proposals + custom tips
   const totalMonthlyPotential = useMemo(() => {
-    return savingsTips.reduce((acc, t) => acc + t.estimatedMonthlySavings, 0);
-  }, [savingsTips]);
+    const customTotal = savingsTips.reduce((acc, t) => acc + t.estimatedMonthlySavings, 0);
+    const dynamicTotal = dynamicAiProposals.reduce((acc, p) => acc + p.impactMonthly, 0);
+    return customTotal + dynamicTotal;
+  }, [savingsTips, dynamicAiProposals]);
 
   const totalAnnualPotential = totalMonthlyPotential * 12;
 
@@ -62,23 +251,8 @@ export const SavingsAdvisorView: React.FC = () => {
       .reduce((acc, t) => acc + t.estimatedMonthlySavings, 0);
   }, [savingsTips]);
 
-  // 50/30/20 Rule Analysis based on actual or simulated income
-  const baseIncome = metrics.totalIncome > 0 ? metrics.totalIncome : simulatedIncome;
-
-  const budget503020 = useMemo(() => {
-    const needs50 = baseIncome * 0.50;  // Arriendo, Luz, Agua, Supermercado
-    const wants30 = baseIncome * 0.30;  // Recreación, Salidas, Streaming
-    const savings20 = baseIncome * 0.20; // Ahorro, Metas, Deuda
-
-    return {
-      needs50,
-      wants30,
-      savings20,
-    };
-  }, [baseIncome]);
-
-  // Filtered tips
-  const filteredTips = useMemo(() => {
+  // Filtered custom tips
+  const filteredCustomTips = useMemo(() => {
     if (selectedFilter === 'all') return savingsTips;
     if (selectedFilter === 'applied') return savingsTips.filter(t => t.isApplied);
     if (selectedFilter === 'pending') return savingsTips.filter(t => !t.isApplied);
@@ -110,7 +284,7 @@ export const SavingsAdvisorView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       
-      {/* Top Banner: AI Savings Header */}
+      {/* Top Banner: AI Dynamic Savings Header */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -119,13 +293,13 @@ export const SavingsAdvisorView: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-white">Asesor Inteligente de Ahorro y Costos</h2>
+                <h2 className="text-xl font-extrabold text-white">Asesor Inteligente de Ahorro en Vivo</h2>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Optimizador IA
+                  Adaptable a tus Movimientos
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Calculadora de la regla 50/30/20, auditoría de fugas de dinero y catálogo de ideas prácticas de ahorro.
+                Analiza tus ingresos y gastos reales en tiempo real, recalculando sugerencias y metas automáticamente con cada cambio.
               </p>
             </div>
           </div>
@@ -135,50 +309,125 @@ export const SavingsAdvisorView: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>Nueva Idea de Ahorro</span>
+            <span>+ Nueva Idea Personalizada</span>
           </button>
         </div>
 
         {/* Big Savings Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900/80 border border-emerald-500/30">
-            <span className="text-xs text-slate-300">Potencial de Ahorro Mensual</span>
+            <span className="text-xs text-slate-300">Potencial de Ahorro Detectado</span>
             <p className="text-2xl font-black text-emerald-400 mt-1">+{formatMoney(totalMonthlyPotential)}/mes</p>
-            <span className="text-[11px] text-emerald-300/80">Identificado en auditorías</span>
+            <span className="text-[11px] text-emerald-300/80">{dynamicAiProposals.length} propuestas activas en vivo</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/30">
             <span className="text-xs text-slate-300">Impacto Anual Proyectado</span>
             <p className="text-2xl font-black text-indigo-300 mt-1">+{formatMoney(totalAnnualPotential)}/año</p>
-            <span className="text-[11px] text-indigo-300/80">Dinero extra que retendrás</span>
+            <span className="text-[11px] text-indigo-300/80">Capital extra recuperable</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700">
-            <span className="text-xs text-slate-300">Ahorro ya Implementado</span>
+            <span className="text-xs text-slate-300">Ahorro ya Aplicado</span>
             <p className="text-2xl font-black text-white mt-1">+{formatMoney(appliedMonthlySavings)}/mes</p>
             <span className="text-[11px] text-teal-400 font-semibold">
-              {savingsTips.filter(t => t.isApplied).length} de {savingsTips.length} ideas activadas
+              {savingsTips.filter(t => t.isApplied).length} optimizaciones fijadas
             </span>
           </div>
         </div>
       </div>
 
-      {/* 50/30/20 INTERACTIVE BUDGET PLANNER */}
+      {/* DYNAMIC AI PROPOSALS SECTION (BASED ON LIVE TRANSACTIONS) */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/40 shadow-card-soft space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="text-emerald-400" size={20} />
+            <h3 className="text-base font-extrabold text-white">Propuestas Dinámicas IA (Calculadas con tus Datos Reales)</h3>
+          </div>
+          <span className="text-[11px] text-emerald-300/90 font-mono bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-500/30">
+            ⚡ Se actualizan con cada ingreso o gasto
+          </span>
+        </div>
+
+        {dynamicAiProposals.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-slate-800/40 text-center text-slate-400 text-xs">
+            Ingresa tus primeros movimientos en el libro de gastos para que el Asesor IA genere propuestas personalizadas.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+            {dynamicAiProposals.map((prop) => {
+              const Icon = prop.icon;
+              const isUrgent = prop.urgency === 'alta';
+
+              return (
+                <div 
+                  key={prop.id}
+                  className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
+                    isUrgent 
+                      ? 'bg-rose-950/20 border-rose-500/40 shadow-glow-rose' 
+                      : 'bg-slate-800/50 border-slate-700/80 hover:border-emerald-500/50'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 rounded-xl ${isUrgent ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                          <Icon size={16} />
+                        </div>
+                        <div>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
+                            isUrgent ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                          }`}>
+                            {prop.category}
+                          </span>
+                          <h4 className="font-bold text-white text-sm mt-1">{prop.title}</h4>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-emerald-400">+{formatMoney(prop.impactMonthly)}/mes</span>
+                        <p className="text-[10px] text-slate-400 font-mono">+{formatMoney(prop.impactAnnual)}/año</p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed pt-1">
+                      {prop.description}
+                    </p>
+                  </div>
+
+                  {prop.actionText && prop.onAction && (
+                    <div className="pt-3 mt-2 border-t border-slate-700/50 flex justify-end">
+                      <button
+                        onClick={prop.onAction}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-sm transition-all flex items-center gap-1 active:scale-95"
+                      >
+                        <span>{prop.actionText}</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 50/30/20 REAL AUDIT COMPARISON */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <PieChartIcon size={18} className="text-emerald-400" />
-              <span>Planificador y Auditoría: Regla 50 / 30 / 20</span>
+              <span>Auditoría Real: Regla 50 / 30 / 20</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Distribución financiera ideal para mantener estabilidad, disfrute y capacidad de ahorro.
+              Compara tus gastos reales registrados frente a la distribución financiera óptima.
             </p>
           </div>
 
-          {/* Income Slider Controller */}
           <div className="flex items-center gap-3 p-2 rounded-2xl bg-slate-800/60 border border-slate-700">
-            <span className="text-xs text-slate-400">Ingreso Mensual Base:</span>
+            <span className="text-xs text-slate-400">Base Mensual:</span>
             <span className="font-extrabold text-sm text-emerald-400 font-mono">{formatMoney(baseIncome)}</span>
           </div>
         </div>
@@ -195,13 +444,16 @@ export const SavingsAdvisorView: React.FC = () => {
                 </span>
                 <h4 className="font-bold text-white text-sm mt-1.5">Gastos Fijos & Esenciales</h4>
               </div>
-              <span className="text-lg font-black text-rose-400">{formatMoney(budget503020.needs50)}</span>
+              <div className="text-right">
+                <span className="text-lg font-black text-rose-400">{formatMoney(budget503020.needs50)}</span>
+                <p className="text-[10px] text-slate-400">Real: {formatMoney(realExpensesAudit.needsAmount)} ({realExpensesAudit.realNeedsPct.toFixed(0)}%)</p>
+              </div>
             </div>
             <p className="text-xs text-slate-400">
-              Arriendo / dividendo, luz, agua, gas, supermercado básico, transporte y salud.
+              Vivienda, luz, agua, supermercado, salud y transporte.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-rose-500 w-1/2" />
+              <div className="h-full bg-rose-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realNeedsPct)}%` }} />
             </div>
           </div>
 
@@ -214,13 +466,16 @@ export const SavingsAdvisorView: React.FC = () => {
                 </span>
                 <h4 className="font-bold text-white text-sm mt-1.5">Gastos Flexibles & Ocio</h4>
               </div>
-              <span className="text-lg font-black text-amber-400">{formatMoney(budget503020.wants30)}</span>
+              <div className="text-right">
+                <span className="text-lg font-black text-amber-400">{formatMoney(budget503020.wants30)}</span>
+                <p className="text-[10px] text-slate-400">Real: {formatMoney(realExpensesAudit.wantsAmount)} ({realExpensesAudit.realWantsPct.toFixed(0)}%)</p>
+              </div>
             </div>
             <p className="text-xs text-slate-400">
-              Recreación, salidas a comer, compras personales, streaming, hobbies y vacaciones.
+              Recreación, salidas a comer, compras, streaming y hobbies.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-amber-500 w-[30%]" />
+              <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realWantsPct)}%` }} />
             </div>
           </div>
 
@@ -233,13 +488,16 @@ export const SavingsAdvisorView: React.FC = () => {
                 </span>
                 <h4 className="font-bold text-white text-sm mt-1.5">Fondos & Inversiones</h4>
               </div>
-              <span className="text-lg font-black text-emerald-400">{formatMoney(budget503020.savings20)}</span>
+              <div className="text-right">
+                <span className="text-lg font-black text-emerald-400">{formatMoney(budget503020.savings20)}</span>
+                <p className="text-[10px] text-slate-400">Real: {formatMoney(Math.max(0, metrics.netCashFlow))} ({realExpensesAudit.realSavingsPct.toFixed(0)}%)</p>
+              </div>
             </div>
             <p className="text-xs text-slate-400">
-              Fondo de emergencia, aportes a metas, inversiones y abonos extraordinarios a deuda.
+              Fondo de reserva, metas financieras y aportes a capital.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-emerald-500 w-[20%]" />
+              <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realSavingsPct)}%` }} />
             </div>
           </div>
 
@@ -248,198 +506,142 @@ export const SavingsAdvisorView: React.FC = () => {
 
       {/* CATALOG OF PRACTICAL SAVINGS IDEAS */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
-        
-        {/* Filter Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h3 className="text-base font-bold text-white">Catálogo de Oportunidades y Sugerencias de Recorte</h3>
-            <p className="text-xs text-slate-400">Activa cada ahorro para monitorear tu capacidad de ahorro mensual</p>
+            <h3 className="text-base font-bold text-white">Catálogo de Ideas de Ahorro y Optimización</h3>
+            <p className="text-xs text-slate-400">Marca las estrategias implementadas para registrar tu ahorro mensual retenido.</p>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700 text-xs">
-            <button
-              onClick={() => setSelectedFilter('all')}
-              className={`px-3 py-1 rounded-lg transition-colors ${selectedFilter === 'all' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Todas ({savingsTips.length})
-            </button>
-            <button
-              onClick={() => setSelectedFilter('pending')}
-              className={`px-3 py-1 rounded-lg transition-colors ${selectedFilter === 'pending' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Pendientes ({savingsTips.filter(t => !t.isApplied).length})
-            </button>
-            <button
-              onClick={() => setSelectedFilter('applied')}
-              className={`px-3 py-1 rounded-lg transition-colors ${selectedFilter === 'applied' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Aplicadas ({savingsTips.filter(t => t.isApplied).length})
-            </button>
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { id: 'all', label: 'Todas' },
+              { id: 'pending', label: 'Pendientes' },
+              { id: 'applied', label: 'Implementadas' }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setSelectedFilter(f.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  selectedFilter === f.id
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                    : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tips Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTips.map((tip) => (
-            <div 
+        {/* Ideas Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {filteredCustomTips.map(tip => (
+            <div
               key={tip.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-                tip.isApplied 
-                  ? 'bg-emerald-950/20 border-emerald-500/40 shadow-glow-emerald' 
-                  : 'bg-slate-800/40 border-slate-700/60 hover:border-slate-600'
+              onClick={() => toggleSavingsTip(tip.id)}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer select-none flex items-start gap-3.5 ${
+                tip.isApplied
+                  ? 'bg-emerald-950/20 border-emerald-500/50 shadow-glow-emerald'
+                  : 'bg-slate-800/40 border-slate-700/70 hover:border-slate-600 hover:bg-slate-800/70'
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+              <div className={`mt-0.5 w-6 h-6 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                tip.isApplied
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  : 'bg-slate-700 border border-slate-600 text-transparent'
+              }`}>
+                {tip.isApplied && <Check size={14} strokeWidth={3} />}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-700/60 text-slate-300 border border-slate-600">
                     {tip.category}
                   </span>
-                  
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    tip.difficulty === 'easy' 
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                      : tip.difficulty === 'medium'
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}>
-                    Dificultad: {tip.difficulty === 'easy' ? 'Fácil' : tip.difficulty === 'medium' ? 'Media' : 'Alta'}
+                  <span className="text-xs font-extrabold text-emerald-400">
+                    +{formatMoney(tip.estimatedMonthlySavings)}/mes
                   </span>
                 </div>
-
-                <h4 className="text-sm font-bold text-white mt-2 leading-snug">{tip.title}</h4>
-                <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">{tip.description}</p>
+                <h4 className={`font-bold text-sm mt-1.5 ${tip.isApplied ? 'text-emerald-300' : 'text-white'}`}>
+                  {tip.title}
+                </h4>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  {tip.description}
+                </p>
               </div>
-
-              <div className="mt-5 pt-3 border-t border-slate-700/60">
-                <div className="flex items-baseline justify-between mb-3">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Ahorro Mensual</span>
-                    <span className="text-base font-black text-emerald-400">+{formatMoney(tip.estimatedMonthlySavings)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">Ahorro Anual</span>
-                    <span className="text-xs font-bold text-slate-300">+{formatMoney(tip.estimatedAnnualSavings)}/año</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => toggleSavingsTip(tip.id)}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    tip.isApplied
-                      ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 shadow-glow-emerald'
-                  }`}
-                >
-                  {tip.isApplied ? (
-                    <>
-                      <Check size={14} strokeWidth={3} />
-                      <span>✓ Ahorro Implementado</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={14} />
-                      <span>Aplicar este Ahorro</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
             </div>
           ))}
         </div>
-
       </div>
 
-      {/* CREATE CUSTOM SAVINGS TIP MODAL */}
+      {/* CREATE CUSTOM SAVINGS IDEA MODAL */}
       {isCustomModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-1">Crear Nueva Idea de Ahorro</h3>
-            <p className="text-xs text-slate-400 mb-4">Registra una optimización de costos para monitorear su impacto</p>
-
-            <form onSubmit={handleAddTipSubmit} className="space-y-4">
+          <div className="w-full max-w-md bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-white">Nueva Idea de Ahorro Personalizada</h3>
+            
+            <form onSubmit={handleAddTipSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Título de la Idea</label>
+                <label className="block text-xs text-slate-300 font-semibold mb-1">Título de la Optimización</label>
                 <input
                   type="text"
                   required
+                  placeholder="Ej: Renegociar plan de internet hogar"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ej: Cambio a plan familiar de internet con 25% de ahorro"
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Categoría</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="Suscripciones & Streaming">Suscripciones & Streaming</option>
-                    <option value="Luz & Electricidad">Luz & Electricidad</option>
-                    <option value="Internet & Teléfono">Internet & Teléfono</option>
-                    <option value="Supermercado & Alimentos">Supermercado & Alimentos</option>
-                    <option value="Recreación & Salidas">Recreación & Salidas</option>
-                    <option value="Arriendo & Hogar">Arriendo & Hogar</option>
-                    <option value="Otros">Otros</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Dificultad</label>
-                  <select
-                    value={newDifficulty}
-                    onChange={(e) => setNewDifficulty(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="easy">Fácil (Inmediato)</option>
-                    <option value="medium">Media (1-2 semanas)</option>
-                    <option value="high">Alta (Requiere negociación)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs text-slate-300 font-semibold mb-1">Categoría</label>
+                <input
+                  type="text"
+                  required
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Ahorro Mensual Estimado ({currentCurrency.symbol})</label>
+                <label className="block text-xs text-slate-300 font-semibold mb-1">Ahorro Mensual Estimado ({currentCurrency.symbol})</label>
                 <input
                   type="number"
-                  step="any"
-                  min="1"
                   required
+                  min="1"
+                  placeholder="Ej: 15000"
                   value={newMonthly}
                   onChange={(e) => setNewMonthly(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-bold focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Descripción y Pasos a Seguir</label>
-                <textarea
-                  rows={3}
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Explica en dónde recortar y cómo implementarlo..."
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3">
+              <div>
+                <label className="block text-xs text-slate-300 font-semibold mb-1">Detalle o Estrategia</label>
+                <textarea
+                  rows={2}
+                  placeholder="Pasos para implementar este ahorro..."
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsCustomModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-glow-emerald"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-glow-emerald transition-all"
                 >
-                  Guardar Sugerencia
+                  Guardar Idea
                 </button>
               </div>
             </form>
