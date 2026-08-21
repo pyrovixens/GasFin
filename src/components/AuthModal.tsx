@@ -31,7 +31,7 @@ export const AuthModal: React.FC = () => {
     isLoading 
   } = useAuth();
 
-  const [mode, setMode] = useState<'login' | 'register' | 'guest' | 'accounts'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'guest' | 'accounts'>(currentUser ? 'accounts' : 'register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
