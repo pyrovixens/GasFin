@@ -8,6 +8,7 @@ import {
   Coins,
   FileSpreadsheet,
   Scan,
+  Cloud,
   User
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
@@ -24,6 +25,8 @@ export const Navbar: React.FC = () => {
     formatMoney,
     currentCurrency,
     userName,
+    supabaseUser,
+    setIsAuthModalOpen,
     setIsCurrencySetupModalOpen,
     setIsDeficitModalOpen,
     exportDataToExcel
@@ -91,6 +94,20 @@ export const Navbar: React.FC = () => {
             <span className="sm:hidden">Déficit</span>
           </button>
         )}
+
+        {/* Cloud Sync Status / Multi-user Login */}
+        <button
+          onClick={() => setIsAuthModalOpen(true)}
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm active:scale-95 ${
+            supabaseUser
+              ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/40'
+              : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-700'
+          }`}
+          title={supabaseUser ? `Conectado a la Nube (${supabaseUser.email})` : 'Conectar con Supabase'}
+        >
+          <Cloud size={15} className={supabaseUser ? 'text-emerald-400' : 'text-slate-400'} />
+          <span className="hidden sm:inline">{supabaseUser ? 'Nube Activa' : 'Sincronizar'}</span>
+        </button>
 
         {/* OCR Receipt Scanner Quick Button */}
         <button

@@ -11,6 +11,7 @@ import {
   Lock,
   CheckCircle2,
   User,
+  Cloud,
   FileSpreadsheet
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
@@ -28,6 +29,11 @@ export const SettingsView: React.FC = () => {
     exportDataToExcel,
     importDataFromJSON, 
     clearAllDataToZero,
+    supabaseUser,
+    isCloudConnected,
+    setIsAuthModalOpen,
+    syncLocalToCloud,
+    logoutSupabase,
     transactions,
     debts,
     goals,
@@ -177,6 +183,57 @@ export const SettingsView: React.FC = () => {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Cloud Database & Supabase Multi-user Sync */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cloud size={18} className="text-emerald-400" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Base de Datos en la Nube (Supabase)</h3>
+          </div>
+          <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
+            supabaseUser 
+              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+              : 'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            {supabaseUser ? '🟢 En Línea' : '⚪ Modo Local / Offline'}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400">
+          {supabaseUser 
+            ? `Conectado como ${supabaseUser.email}. Todos tus movimientos, presupuestos y metas se sincronizan en tiempo real con Supabase PostgreSQL.` 
+            : 'Conecta tu cuenta para guardar tus finanzas en la nube y acceder desde tu PC, teléfono Android o iPhone.'}
+        </p>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {supabaseUser ? (
+            <>
+              <button
+                onClick={syncLocalToCloud}
+                className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2"
+              >
+                <Database size={15} />
+                <span>Forzar Sincronización a la Nube</span>
+              </button>
+              <button
+                onClick={logoutSupabase}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-rose-400 font-bold text-xs border border-slate-700 transition-colors"
+              >
+                Cerrar Sesión Cloud
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2"
+            >
+              <Cloud size={15} />
+              <span>Iniciar Sesión o Crear Cuenta Cloud</span>
+            </button>
+          )}
         </div>
       </div>
 

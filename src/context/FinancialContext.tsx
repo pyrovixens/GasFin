@@ -17,6 +17,19 @@ import {
   INITIAL_SAVINGS_TIPS, 
   SUPPORTED_CURRENCIES 
 } from '../data/initialData';
+import { 
+  supabase, 
+  fetchUserDataFromSupabase, 
+  syncTransactionToSupabase, 
+  deleteTransactionFromSupabase, 
+  syncDebtToSupabase, 
+  deleteDebtFromSupabase, 
+  syncGoalToSupabase, 
+  deleteGoalFromSupabase, 
+  syncBudgetToSupabase, 
+  deleteBudgetFromSupabase, 
+  syncFullDatasetToSupabase 
+} from '../services/supabase';
 
 export const MOTIVATIONAL_QUOTES = [
   "«Cada peso bien administrado hoy es un paso firme hacia tu libertad financiera.»",
@@ -40,6 +53,16 @@ interface FinancialContextType {
   userName: string;
   setUserName: (name: string) => void;
   motivationalQuote: string;
+
+  // Supabase Cloud Sync & Multi-user
+  supabaseUser: any;
+  isCloudConnected: boolean;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  loginWithSupabase: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signupWithSupabase: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string }>;
+  logoutSupabase: () => Promise<void>;
+  syncLocalToCloud: () => Promise<void>;
 
   // Currency & Permanent Selection
   currentCurrency: CurrencyConfig;
@@ -196,6 +219,114 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+  
+  // Supabase Cloud Sync State
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  // Load cloud data helper
+  const loadCloudData = async (userId: string) => {
+    try {
+      const res = await fetchUserDataFromSupabase(userId);
+      if (res.success && res.data) {
+        if (res.data.transactions.length > 0) setTransactions(res.data.transactions);
+        if (res.data.debts.length > 0) setDebts(res.data.debts);
+        if (res.data.goals.length > 0) setGoals(res.data.goals);
+        if (res.data.budgets.length > 0) setBudgets(res.data.budgets);
+        if (res.data.profile?.display_name) setUserName(res.data.profile.display_name);
+      }
+    } catch (e) {
+      console.warn('Cloud sync fetch error:', e);
+    }
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        setIsCloudConnected(true);
+        loadCloudData(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        setIsCloudConnected(true);
+        loadCloudData(session.user.id);
+      } else {
+        setSupabaseUser(null);
+        setIsCloudConnected(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loginWithSupabase = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return { success: false, error: error.message };
+      if (data.user) {
+        setSupabaseUser(data.user);
+        setIsCloudConnected(true);
+        await loadCloudData(data.user.id);
+        triggerCelebration();
+        return { success: true };
+      }
+      return { success: false, error: 'No se pudo iniciar sesión.' };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  };
+
+  const signupWithSupabase = async (email: string, password: string, displayName?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName || 'Usuario' }
+        }
+      });
+      if (error) return { success: false, error: error.message };
+      if (data.user) {
+        setSupabaseUser(data.user);
+        setIsCloudConnected(true);
+        if (displayName) setUserName(displayName);
+        // Upload initial local data to the newly created user account
+        await syncFullDatasetToSupabase(data.user.id, {
+          transactions,
+          debts,
+          goals,
+          budgets
+        });
+        triggerCelebration();
+        return { success: true };
+      }
+      return { success: false, error: 'Error al crear cuenta.' };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  };
+
+  const logoutSupabase = async () => {
+    await supabase.auth.signOut();
+    setSupabaseUser(null);
+    setIsCloudConnected(false);
+  };
+
+  const syncLocalToCloud = async () => {
+    if (!supabaseUser) return;
+    await syncFullDatasetToSupabase(supabaseUser.id, {
+      transactions,
+      debts,
+      goals,
+      budgets
+    });
+    triggerCelebration();
+  };
 
   const [savingsTips, setSavingsTips] = useState<SavingsTip[]>(() => {
     const saved = localStorage.getItem('gastfin_tips_v6');
@@ -209,15 +340,24 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString(),
     };
     setBudgets(prev => [...prev.filter(b => b.category !== budget.category), newB]);
+    if (supabaseUser) syncBudgetToSupabase(newB, supabaseUser.id);
     triggerCelebration();
   };
 
   const updateBudget = (id: string, limitAmount: number) => {
-    setBudgets(prev => prev.map(b => b.id === id ? { ...b, limitAmount } : b));
+    setBudgets(prev => prev.map(b => {
+      if (b.id === id) {
+        const updated = { ...b, limitAmount };
+        if (supabaseUser) syncBudgetToSupabase(updated, supabaseUser.id);
+        return updated;
+      }
+      return b;
+    }));
   };
 
   const deleteBudget = (id: string) => {
     setBudgets(prev => prev.filter(b => b.id !== id));
+    if (supabaseUser) deleteBudgetFromSupabase(id, supabaseUser.id);
   };
 
   // Modals state
@@ -408,15 +548,24 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     };
     setTransactions(prev => [newTx, ...prev]);
+    if (supabaseUser) syncTransactionToSupabase(newTx, supabaseUser.id);
     triggerCelebration();
   };
 
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
-    setTransactions(prev => prev.map(t => (t.id === id ? { ...t, ...updated } : t)));
+    setTransactions(prev => prev.map(t => {
+      if (t.id === id) {
+        const res = { ...t, ...updated };
+        if (supabaseUser) syncTransactionToSupabase(res, supabaseUser.id);
+        return res;
+      }
+      return t;
+    }));
   };
 
   const deleteTransaction = (id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+    if (supabaseUser) deleteTransactionFromSupabase(id, supabaseUser.id);
   };
 
   // Debt CRUD
@@ -426,25 +575,36 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `debt-${Date.now()}`,
     };
     setDebts(prev => [...prev, newDebt]);
+    if (supabaseUser) syncDebtToSupabase(newDebt, supabaseUser.id);
     triggerCelebration();
   };
 
   const updateDebt = (id: string, updated: Partial<Debt>) => {
-    setDebts(prev => prev.map(d => (d.id === id ? { ...d, ...updated } : d)));
+    setDebts(prev => prev.map(d => {
+      if (d.id === id) {
+        const res = { ...d, ...updated };
+        if (supabaseUser) syncDebtToSupabase(res, supabaseUser.id);
+        return res;
+      }
+      return d;
+    }));
   };
 
   const deleteDebt = (id: string) => {
     setDebts(prev => prev.filter(d => d.id !== id));
+    if (supabaseUser) deleteDebtFromSupabase(id, supabaseUser.id);
   };
 
   const makeDebtPayment = (id: string, amount: number) => {
     setDebts(prev => prev.map(d => {
       if (d.id === id) {
         const newRemaining = Math.max(0, d.remainingAmount - amount);
-        return {
+        const updated = {
           ...d,
           remainingAmount: newRemaining,
         };
+        if (supabaseUser) syncDebtToSupabase(updated, supabaseUser.id);
+        return updated;
       }
       return d;
     }));
@@ -477,25 +637,36 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString().split('T')[0],
     };
     setGoals(prev => [...prev, newGoal]);
+    if (supabaseUser) syncGoalToSupabase(newGoal, supabaseUser.id);
     triggerCelebration();
   };
 
   const updateGoal = (id: string, updated: Partial<Goal>) => {
-    setGoals(prev => prev.map(g => (g.id === id ? { ...g, ...updated } : g)));
+    setGoals(prev => prev.map(g => {
+      if (g.id === id) {
+        const res = { ...g, ...updated };
+        if (supabaseUser) syncGoalToSupabase(res, supabaseUser.id);
+        return res;
+      }
+      return g;
+    }));
   };
 
   const deleteGoal = (id: string) => {
     setGoals(prev => prev.filter(g => g.id !== id));
+    if (supabaseUser) deleteGoalFromSupabase(id, supabaseUser.id);
   };
 
   const contributeToGoal = (id: string, amount: number) => {
     setGoals(prev => prev.map(g => {
       if (g.id === id) {
         const newAmount = g.currentAmount + amount;
-        return {
+        const updated = {
           ...g,
           currentAmount: newAmount,
         };
+        if (supabaseUser) syncGoalToSupabase(updated, supabaseUser.id);
+        return updated;
       }
       return g;
     }));
@@ -699,6 +870,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         userName,
         setUserName,
         motivationalQuote,
+        supabaseUser,
+        isCloudConnected,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        loginWithSupabase,
+        signupWithSupabase,
+        logoutSupabase,
+        syncLocalToCloud,
         currentCurrency,
         setCurrency,
         isCurrencySetupModalOpen,
