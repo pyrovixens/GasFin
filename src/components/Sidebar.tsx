@@ -13,7 +13,11 @@ import {
   Sparkles,
   Building2,
   X,
-  User
+  User,
+  BarChart3,
+  Calendar,
+  Zap,
+  FileText
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { ActiveView } from '../types';
@@ -47,6 +51,18 @@ export const Sidebar: React.FC = () => {
       icon: ArrowLeftRight,
     },
     {
+      id: 'budgets' as ActiveView,
+      label: 'Presupuestos por Categoría',
+      icon: BarChart3,
+      badge: 'Control',
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+    },
+    {
+      id: 'calendar' as ActiveView,
+      label: 'Calendario & Vencimientos',
+      icon: Calendar,
+    },
+    {
       id: 'debts' as ActiveView,
       label: 'Optimizador de Deudas',
       icon: CreditCard,
@@ -67,8 +83,20 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'scenarios' as ActiveView,
-      label: 'Simulador & Escenarios',
+      label: 'Simulador de Sueldo',
       icon: TrendingUp,
+    },
+    {
+      id: 'compound' as ActiveView,
+      label: 'Libertad Financiera & Interés',
+      icon: Zap,
+      badge: 'FIRE',
+      badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+    },
+    {
+      id: 'reports' as ActiveView,
+      label: 'Reportes & Balances PDF',
+      icon: FileText,
     },
     {
       id: 'settings' as ActiveView,

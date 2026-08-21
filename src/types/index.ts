@@ -56,6 +56,14 @@ export interface Goal {
   userId?: string;
 }
 
+export interface CategoryBudget {
+  id: string;
+  category: string;
+  limitAmount: number;
+  period: 'monthly';
+  createdAt: string;
+}
+
 export interface SavingsTip {
   id: string;
   title: string;
@@ -98,10 +106,14 @@ export interface FinancialMetrics {
 export type ActiveView = 
   | 'dashboard'
   | 'transactions'
+  | 'budgets'
+  | 'calendar'
   | 'debts'
   | 'savings'
   | 'goals'
   | 'scenarios'
+  | 'compound'
+  | 'reports'
   | 'settings';
 
 // Multi-user & Authentication Types

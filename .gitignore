@@ -26,6 +26,8 @@ dist-ssr
 # Build binaries
 builds/windows-pc/win-unpacked
 builds/windows-pc/*.7z
+builds/windows-pc/*.exe
+builds/windows-pc/*.blockmap
 builds/android-apk/app/build
 builds/android-apk/.gradle
 

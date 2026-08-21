@@ -7,6 +7,7 @@ import {
   CheckCircle2, 
   Coins,
   FileSpreadsheet,
+  Scan,
   User
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
@@ -17,6 +18,7 @@ export const Navbar: React.FC = () => {
     isDarkMode, 
     toggleDarkMode, 
     openTransactionModal,
+    setIsReceiptScannerOpen,
     setIsSidebarCollapsed,
     metrics,
     formatMoney,
@@ -31,10 +33,14 @@ export const Navbar: React.FC = () => {
     switch (activeView) {
       case 'dashboard': return { title: 'Dashboard Ejecutivo', subtitle: 'Vista general de tesorería, liquidez y balance financiero' };
       case 'transactions': return { title: 'Libro de Ingresos y Gastos', subtitle: 'Registro cronológico y auditoría de movimientos' };
+      case 'budgets': return { title: 'Control de Presupuestos Mensuales', subtitle: 'Límites de gasto por categoría y alertas de sobregiro' };
+      case 'calendar': return { title: 'Calendario Financiero & Vencimientos', subtitle: 'Planificación de pagos de sueldos, servicios y deudas' };
       case 'debts': return { title: 'Optimizador y Calculadora de Deudas', subtitle: 'Estrategias Bola de Nieve vs Avalancha y amortizaciones' };
       case 'savings': return { title: 'Asesor Inteligente de Ahorro', subtitle: 'Detección de fugas de dinero y distribución 50/30/20' };
       case 'goals': return { title: 'Metas y Fondos Financieros', subtitle: 'Planificación de reservas, ahorro e inversiones' };
       case 'scenarios': return { title: 'Simulador Financiero What-If', subtitle: 'Proyecciones estratégicas basadas en tu sueldo' };
+      case 'compound': return { title: 'Libertad Financiera & Interés Compuesto', subtitle: 'Simulación de crecimiento exponencial y regla FIRE' };
+      case 'reports': return { title: 'Reportes Financieros & Balances PDF', subtitle: 'Estados ejecutivos oficiales imprimibles y descargables' };
       case 'settings': return { title: 'Configuración & Respaldos', subtitle: 'Preferencias de divisa fija, backups y control' };
       default: return { title: 'GastFin', subtitle: 'Control de Costos' };
     }
@@ -86,6 +92,16 @@ export const Navbar: React.FC = () => {
           </button>
         )}
 
+        {/* OCR Receipt Scanner Quick Button */}
+        <button
+          onClick={() => setIsReceiptScannerOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 font-bold text-xs transition-all shadow-sm active:scale-95"
+          title="Escanear o subir foto de boleta / factura"
+        >
+          <Scan size={15} className="text-indigo-400" />
+          <span className="hidden sm:inline">Escanear Boleta</span>
+        </button>
+
         {/* Currency Quick Click */}
         <button
           onClick={() => setIsCurrencySetupModalOpen(true)}
@@ -93,13 +109,13 @@ export const Navbar: React.FC = () => {
           title="Ver o cambiar divisa principal"
         >
           <Coins size={14} className="text-amber-400" />
-          <span>{currentCurrency.code} ({currentCurrency.symbol})</span>
+          <span>{currentCurrency.code}</span>
         </button>
 
         {/* Export to Excel Quick Button */}
         <button
           onClick={exportDataToExcel}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs transition-all shadow-sm"
+          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs transition-all shadow-sm"
           title="Exportar base de datos a Excel"
         >
           <FileSpreadsheet size={15} />

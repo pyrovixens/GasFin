@@ -4,6 +4,7 @@ import {
   Transaction, 
   Debt, 
   Goal, 
+  CategoryBudget,
   SavingsTip, 
   CurrencyConfig, 
   FinancialMetrics, 
@@ -72,6 +73,12 @@ interface FinancialContextType {
   deleteGoal: (id: string) => void;
   contributeToGoal: (id: string, amount: number) => void;
 
+  // Category Budgets
+  budgets: CategoryBudget[];
+  addBudget: (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => void;
+  updateBudget: (id: string, limitAmount: number) => void;
+  deleteBudget: (id: string) => void;
+
   // Savings Tips
   savingsTips: SavingsTip[];
   toggleSavingsTip: (id: string) => void;
@@ -87,6 +94,10 @@ interface FinancialContextType {
   isTransactionMinimized: boolean;
   toggleTransactionMinimized: () => void;
   editingTransaction: Transaction | null;
+
+  // Receipt OCR Scanner Modal
+  isReceiptScannerOpen: boolean;
+  setIsReceiptScannerOpen: (open: boolean) => void;
   
   isDeficitModalOpen: boolean;
   setIsDeficitModalOpen: (open: boolean) => void;
@@ -173,10 +184,41 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
+    const saved = localStorage.getItem('gastfin_budgets_v6');
+    return saved ? JSON.parse(saved) : [
+      { id: 'b-1', category: 'Alimentación & Supermercado', limitAmount: 350000, period: 'monthly', createdAt: new Date().toISOString() },
+      { id: 'b-2', category: 'Servicios Básicos & Hogar', limitAmount: 120000, period: 'monthly', createdAt: new Date().toISOString() },
+      { id: 'b-3', category: 'Restaurantes & Salidas', limitAmount: 90000, period: 'monthly', createdAt: new Date().toISOString() },
+      { id: 'b-4', category: 'Transporte & Combustible', limitAmount: 80000, period: 'monthly', createdAt: new Date().toISOString() },
+      { id: 'b-5', category: 'Suscripciones & Ocio', limitAmount: 40000, period: 'monthly', createdAt: new Date().toISOString() },
+    ];
+  });
+
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+
   const [savingsTips, setSavingsTips] = useState<SavingsTip[]>(() => {
     const saved = localStorage.getItem('gastfin_tips_v6');
     return saved ? JSON.parse(saved) : INITIAL_SAVINGS_TIPS;
   });
+
+  const addBudget = (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => {
+    const newB: CategoryBudget = {
+      ...budget,
+      id: `b-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setBudgets(prev => [...prev.filter(b => b.category !== budget.category), newB]);
+    triggerCelebration();
+  };
+
+  const updateBudget = (id: string, limitAmount: number) => {
+    setBudgets(prev => prev.map(b => b.id === id ? { ...b, limitAmount } : b));
+  };
+
+  const deleteBudget = (id: string) => {
+    setBudgets(prev => prev.filter(b => b.id !== id));
+  };
 
   // Modals state
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
@@ -207,6 +249,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     localStorage.setItem('gastfin_tips_v6', JSON.stringify(savingsTips));
   }, [savingsTips]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_budgets_v6', JSON.stringify(budgets));
+  }, [budgets]);
 
   useEffect(() => {
     localStorage.setItem('gastfin_currency_v6', currentCurrency.code);
@@ -675,6 +721,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateGoal,
         deleteGoal,
         contributeToGoal,
+        budgets,
+        addBudget,
+        updateBudget,
+        deleteBudget,
+        isReceiptScannerOpen,
+        setIsReceiptScannerOpen,
         savingsTips,
         toggleSavingsTip,
         addSavingsTip,

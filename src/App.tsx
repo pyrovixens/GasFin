@@ -5,12 +5,17 @@ import { Navbar } from './components/Navbar';
 import { BottomNavBar } from './components/BottomNavBar';
 import { DashboardView } from './components/DashboardView';
 import { TransactionsView } from './components/TransactionsView';
+import { BudgetsView } from './components/BudgetsView';
+import { CalendarView } from './components/CalendarView';
 import { DebtCalculatorView } from './components/DebtCalculatorView';
 import { SavingsAdvisorView } from './components/SavingsAdvisorView';
 import { GoalsView } from './components/GoalsView';
 import { ScenariosView } from './components/ScenariosView';
+import { CompoundInterestView } from './components/CompoundInterestView';
+import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
+import { ReceiptScannerModal } from './components/ReceiptScannerModal';
 import { DebtModal } from './components/DebtModal';
 import { GoalModal } from './components/GoalModal';
 import { DeficitAlertModal } from './components/DeficitAlertModal';
@@ -25,6 +30,10 @@ export const AppContent: React.FC = () => {
         return <DashboardView />;
       case 'transactions':
         return <TransactionsView />;
+      case 'budgets':
+        return <BudgetsView />;
+      case 'calendar':
+        return <CalendarView />;
       case 'debts':
         return <DebtCalculatorView />;
       case 'savings':
@@ -33,6 +42,10 @@ export const AppContent: React.FC = () => {
         return <GoalsView />;
       case 'scenarios':
         return <ScenariosView />;
+      case 'compound':
+        return <CompoundInterestView />;
+      case 'reports':
+        return <ReportsView />;
       case 'settings':
         return <SettingsView />;
       default:
@@ -61,6 +74,9 @@ export const AppContent: React.FC = () => {
 
       {/* Floating / Responsive Transaction Window */}
       <TransactionModal />
+
+      {/* Intelligent OCR Receipt Scanner */}
+      <ReceiptScannerModal />
 
       {/* Modals & Dialogs */}
       <DebtModal />
