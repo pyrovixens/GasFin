@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
-  Download, 
-  Plus, 
   ArrowUpRight, 
   ArrowDownRight, 
   Trash2, 
@@ -13,7 +11,11 @@ import {
   CreditCard,
   Printer,
   FileSpreadsheet,
-  Clock
+  Clock,
+  Plus,
+  Inbox,
+  ShieldCheck,
+  RotateCcw
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Transaction, TransactionType } from '../types';
@@ -27,26 +29,45 @@ export const TransactionsView: React.FC = () => {
     exportDataToExcel 
   } = useFinancial();
 
+  // Helper for bank-style date and time formatting
+  const formatBankDateTime = (dateStr: string, timeStr?: string) => {
+    try {
+      if (!dateStr) return { dateFormatted: 'Fecha pendiente', timeFormatted: '12:00 hrs' };
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const dateFormatted = `${day || 1} ${months[(month || 1) - 1]} ${year || 2026}`;
+      const timeFormatted = timeStr ? `${timeStr} hrs` : '12:00 hrs';
+      return { dateFormatted, timeFormatted };
+    } catch {
+      return { dateFormatted: dateStr, timeFormatted: timeStr || '12:00 hrs' };
+    }
+  };
+
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | TransactionType>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
 
-  // Extract unique categories
+  // Extract unique categories safely
   const categories = useMemo(() => {
-    const set = new Set(transactions.map(t => t.category));
+    const set = new Set(transactions.map(t => t.category).filter(Boolean));
     return Array.from(set);
   }, [transactions]);
 
   // Filtered transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
+      const desc = t.description || '';
+      const cat = t.category || '';
+      const vendor = t.vendorOrClient || '';
+      const tags = t.tags || [];
+
       const matchesSearch = 
-        t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (t.vendorOrClient && t.vendorOrClient.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (t.tags && t.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+        desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesType = typeFilter === 'all' || t.type === typeFilter;
       const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
@@ -76,36 +97,11 @@ export const TransactionsView: React.FC = () => {
     };
   }, [filteredTransactions]);
 
-  // Export to CSV
-  const handleExportCSV = () => {
-    const headers = ['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha', 'Método', 'Estado', 'Entidad / Cliente', 'Notas'];
-    const rows = filteredTransactions.map(t => [
-      t.id,
-      t.type === 'income' ? 'Ingreso' : 'Gasto',
-      t.amount,
-      `"${t.category}"`,
-      `"${t.description}"`,
-      t.date,
-      t.paymentMethod,
-      t.status,
-      `"${t.vendorOrClient || ''}"`,
-      `"${t.notes || ''}"`
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `gastfin_movimientos_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  };
-
-  const handlePrint = () => {
-    window.print();
+  const clearFilters = () => {
+    setSearchTerm('');
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setMethodFilter('all');
   };
 
   return (
@@ -116,10 +112,12 @@ export const TransactionsView: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-lg font-bold">🏛️</span>
+              <span className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 text-xl font-bold border border-emerald-500/20 shadow-glow-emerald">
+                🏛️
+              </span>
               <div>
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Libro de Movimientos Bancarios</h1>
-                <p className="text-xs text-slate-400 mt-0.5">Cartola de transacciones con fecha y hora en tiempo real.</p>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Cartola & Libro de Movimientos</h1>
+                <p className="text-xs text-slate-400 mt-0.5">Auditoría contable y registro en tiempo real de ingresos y gastos.</p>
               </div>
             </div>
           </div>
@@ -127,7 +125,7 @@ export const TransactionsView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={exportDataToExcel}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm"
               title="Descargar Libro Completo en Excel"
             >
               <FileSpreadsheet size={16} />
@@ -136,8 +134,8 @@ export const TransactionsView: React.FC = () => {
 
             <button
               onClick={() => window.print()}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-all flex items-center gap-1.5"
-              title="Imprimir resumen"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-all flex items-center gap-1.5"
+              title="Imprimir cartola"
             >
               <Printer size={16} className="text-slate-400" />
               <span>Imprimir</span>
@@ -145,9 +143,9 @@ export const TransactionsView: React.FC = () => {
 
             <button
               onClick={() => openTransactionModal('income')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-bold shadow-glow-emerald transition-all flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black shadow-glow-emerald transition-all flex items-center gap-1.5"
             >
-              <span>Ingreso</span>
+              <span>+ Nuevo Movimiento</span>
             </button>
           </div>
         </div>
@@ -161,7 +159,7 @@ export const TransactionsView: React.FC = () => {
               placeholder="Buscar movimiento, concepto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
@@ -170,7 +168,7 @@ export const TransactionsView: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
             >
               <option value="all">Todos los Tipos</option>
               <option value="income">Solo Ingresos (+)</option>
@@ -183,10 +181,10 @@ export const TransactionsView: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
             >
               <option value="all">Todas las Categorías</option>
-              {allCategories.map(cat => (
+              {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -197,11 +195,11 @@ export const TransactionsView: React.FC = () => {
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-white focus:outline-none focus:border-emerald-500"
             >
-              <option value="all">Todos los Métodos</option>
+              <option value="all">Todos los Canales de Pago</option>
               <option value="transfer">Transferencia</option>
-              <option value="card">Tarjeta Débito/Crédito</option>
+              <option value="card">Tarjeta Débito / Crédito</option>
               <option value="cash">Efectivo</option>
               <option value="check">Cheque</option>
             </select>
@@ -225,7 +223,7 @@ export const TransactionsView: React.FC = () => {
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-[11px] font-semibold text-slate-400">Balance del Rango</span>
+            <span className="text-[11px] font-semibold text-slate-400">Balance Contable</span>
             <p className={`text-sm sm:text-base font-black mt-0.5 ${totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {formatMoney(totals.balance)}
             </p>
@@ -234,30 +232,61 @@ export const TransactionsView: React.FC = () => {
 
       </div>
 
-      {/* Transactions Data Table */}
+      {/* Transactions Data Table or Bank-Style Empty State */}
       <div className="rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
-                <th className="py-4 px-5">Fecha & Hora</th>
-                <th className="py-4 px-5">Detalle / Concepto</th>
-                <th className="py-4 px-4">Categoría</th>
-                <th className="py-4 px-4">Medio / Canal</th>
-                <th className="py-4 px-5 text-right">Monto</th>
-                <th className="py-4 px-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-sm">
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">
-                    <p className="font-semibold text-slate-300">No se encontraron movimientos con los filtros actuales.</p>
-                    <p className="text-xs text-slate-500 mt-1">Prueba cambiando los criterios de búsqueda o crea un nuevo registro.</p>
-                  </td>
-                </tr>
+        {filteredTransactions.length === 0 ? (
+          /* Bank-Style Empty State */
+          <div className="p-10 sm:p-14 text-center space-y-4 max-w-lg mx-auto">
+            <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-glow-emerald">
+              <Inbox size={32} />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-black text-white">
+                {transactions.length === 0 ? 'Sin movimientos registrados en tu cuenta' : 'No hay resultados con los filtros seleccionados'}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {transactions.length === 0 
+                  ? 'Tu cartola bancaria está lista y en cero. Registra tu primer ingreso (sueldo, ventas) o gasto operativo para comenzar el balance.'
+                  : 'Prueba restableciendo los filtros de búsqueda para ver todos los movimientos.'}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap gap-2.5 justify-center">
+              {transactions.length === 0 ? (
+                <button
+                  onClick={() => openTransactionModal('income')}
+                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2 active:scale-95"
+                >
+                  <Plus size={16} strokeWidth={3} />
+                  <span>Registrar Primer Ingreso</span>
+                </button>
               ) : (
-                filteredTransactions.map((tx) => {
+                <button
+                  onClick={clearFilters}
+                  className="px-5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5"
+                >
+                  <RotateCcw size={14} />
+                  <span>Restablecer Filtros</span>
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
+                  <th className="py-4 px-5">Fecha & Hora</th>
+                  <th className="py-4 px-5">Detalle / Concepto</th>
+                  <th className="py-4 px-4">Categoría</th>
+                  <th className="py-4 px-4">Medio / Canal</th>
+                  <th className="py-4 px-5 text-right">Monto</th>
+                  <th className="py-4 px-4 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-sm">
+                {filteredTransactions.map((tx) => {
                   const isIncome = tx.type === 'income';
                   const bankDate = formatBankDateTime(tx.date, tx.time);
 
@@ -271,9 +300,10 @@ export const TransactionsView: React.FC = () => {
                         <div className="font-bold text-slate-200">{bankDate.dateFormatted}</div>
                         <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
                           <Clock size={11} className="text-amber-400" />
-                          <span>{bankDate.timeFormatted || tx.time || '12:00 hrs'}</span>
+                          <span>{bankDate.timeFormatted}</span>
                         </div>
                       </td>
+
                       {/* Concept & Type */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
@@ -349,11 +379,11 @@ export const TransactionsView: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </div>
