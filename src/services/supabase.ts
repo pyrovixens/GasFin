@@ -231,3 +231,34 @@ export const syncFullDatasetToSupabase = async (
     return { success: false, error };
   }
 };
+
+// ==========================================
+// 3. REALTIME CROSS-DEVICE SUBSCRIPTION
+// ==========================================
+
+export const subscribeToUserRealtimeChanges = (
+  userId: string,
+  onDataChanged: () => void
+) => {
+  if (!userId) return () => {};
+
+  const channel = supabase
+    .channel(`user-sync-${userId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${userId}` }, () => {
+      onDataChanged();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'debts', filter: `user_id=eq.${userId}` }, () => {
+      onDataChanged();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'goals', filter: `user_id=eq.${userId}` }, () => {
+      onDataChanged();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${userId}` }, () => {
+      onDataChanged();
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};

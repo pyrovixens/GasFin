@@ -20,6 +20,7 @@ import {
 import { 
   supabase, 
   fetchUserDataFromSupabase, 
+  subscribeToUserRealtimeChanges,
   syncTransactionToSupabase, 
   deleteTransactionFromSupabase, 
   syncDebtToSupabase, 
@@ -263,6 +264,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Realtime multi-device sync
+  useEffect(() => {
+    if (!supabaseUser?.id) return;
+    const unsubscribe = subscribeToUserRealtimeChanges(supabaseUser.id, () => {
+      loadCloudData(supabaseUser.id);
+    });
+    return () => unsubscribe();
+  }, [supabaseUser]);
 
   const loginWithSupabase = async (email: string, password: string) => {
     try {
