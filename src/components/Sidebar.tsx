@@ -13,14 +13,12 @@ import {
   Sparkles,
   Building2,
   X,
-  LogOut
+  User
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
-import { useAuth } from '../context/AuthContext';
 import { ActiveView } from '../types';
 
 export const Sidebar: React.FC = () => {
-  const { currentUser, logout } = useAuth();
   const { 
     activeView, 
     setActiveView, 
@@ -30,7 +28,9 @@ export const Sidebar: React.FC = () => {
     debts,
     savingsTips,
     currentCurrency,
-    setCurrency
+    setCurrency,
+    userName,
+    setIsCurrencySetupModalOpen
   } = useFinancial();
 
   const menuItems = [
@@ -234,34 +234,21 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* Organization / User Profile Footer with Cerrar Sesión */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
-          <div className={`flex items-center gap-2.5 ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center' : 'justify-between'}`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              {currentUser?.photoURL ? (
-                <img src={currentUser.photoURL} alt={currentUser.displayName} className="w-8 h-8 rounded-full border border-emerald-500/50 flex-shrink-0" />
-              ) : (
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-xs flex-shrink-0">
-                  {currentUser?.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'GF'}
-                </div>
-              )}
-              {(!isSidebarCollapsed || window.innerWidth < 768) && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-white truncate">{currentUser?.displayName || 'Usuario'}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{currentUser?.email || 'Sin sesión'}</p>
-                </div>
-              )}
+        {/* Profile Footer */}
+        <div 
+          onClick={() => setIsCurrencySetupModalOpen(true)}
+          className="p-3 border-t border-slate-800/80 bg-slate-950/60 cursor-pointer hover:bg-slate-900/80 transition-colors"
+          title="Editar nombre y divisa principal"
+        >
+          <div className={`flex items-center gap-2.5 ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center' : ''}`}>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-xs flex-shrink-0">
+              {userName ? userName.charAt(0).toUpperCase() : 'G'}
             </div>
-
             {(!isSidebarCollapsed || window.innerWidth < 768) && (
-              <button
-                onClick={logout}
-                title="Cerrar Sesión y cambiar de usuario"
-                className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/30 transition-all flex items-center gap-1 text-[11px] font-bold flex-shrink-0"
-              >
-                <LogOut size={14} />
-                <span className="hidden xl:inline">Salir</span>
-              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-white truncate">{userName || 'Mi Cuenta'}</p>
+                <p className="text-[10px] text-emerald-400/90 truncate font-mono">Divisa: {currentCurrency.code}</p>
+              </div>
             )}
           </div>
         </div>

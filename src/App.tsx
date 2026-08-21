@@ -1,6 +1,5 @@
 import React from 'react';
 import { useFinancial } from './context/FinancialContext';
-import { useAuth } from './context/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
 import { BottomNavBar } from './components/BottomNavBar';
@@ -16,11 +15,9 @@ import { DebtModal } from './components/DebtModal';
 import { GoalModal } from './components/GoalModal';
 import { DeficitAlertModal } from './components/DeficitAlertModal';
 import { CurrencySetupModal } from './components/CurrencySetupModal';
-import { AuthModal } from './components/AuthModal';
 
 export const AppContent: React.FC = () => {
   const { activeView } = useFinancial();
-  const { currentUser } = useAuth();
 
   const renderActiveView = () => {
     switch (activeView) {
@@ -42,15 +39,6 @@ export const AppContent: React.FC = () => {
         return <DashboardView />;
     }
   };
-
-  // If no user session is active, start exclusively on the Bank Portal (Registro / Login)
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 selection:bg-emerald-500 selection:text-white">
-        <AuthModal />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
@@ -74,8 +62,7 @@ export const AppContent: React.FC = () => {
       {/* Floating / Responsive Transaction Window */}
       <TransactionModal />
 
-      {/* Multi-User & System Modals */}
-      <AuthModal />
+      {/* Modals & Dialogs */}
       <DebtModal />
       <GoalModal />
       <DeficitAlertModal />

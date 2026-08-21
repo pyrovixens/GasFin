@@ -6,10 +6,10 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   Coins,
-  FileSpreadsheet
+  FileSpreadsheet,
+  User
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
-import { UserProfileMenu } from './UserProfileMenu';
 
 export const Navbar: React.FC = () => {
   const { 
@@ -21,6 +21,7 @@ export const Navbar: React.FC = () => {
     metrics,
     formatMoney,
     currentCurrency,
+    userName,
     setIsCurrencySetupModalOpen,
     setIsDeficitModalOpen,
     exportDataToExcel
@@ -61,8 +62,17 @@ export const Navbar: React.FC = () => {
 
       <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
         
-        {/* User Multi-Account Profile Menu */}
-        <UserProfileMenu />
+        {/* User Badge / Quick Name & Currency Setup */}
+        <button
+          onClick={() => setIsCurrencySetupModalOpen(true)}
+          className="flex items-center gap-2 p-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 text-slate-200 text-xs font-bold transition-all shadow-sm group"
+          title="Editar alias y divisa principal"
+        >
+          <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xs">
+            {userName ? userName.charAt(0).toUpperCase() : 'G'}
+          </div>
+          <span className="hidden sm:inline font-extrabold text-white">{userName || 'Mi Cuenta'}</span>
+        </button>
 
         {/* Real-time Deficit Status Badge */}
         {metrics.isDeficit && (
