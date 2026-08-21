@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GastFin - Suite Financiera</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399',
+              500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .shadow-glow-emerald { box-shadow: 0 0 25px -4px rgba(16, 185, 129, 0.35); }
+    .shadow-glow-rose { box-shadow: 0 0 25px -4px rgba(244, 63, 94, 0.4); }
+    .shadow-glow-indigo { box-shadow: 0 0 25px -4px rgba(99, 102, 241, 0.35); }
+    .shadow-glow-amber { box-shadow: 0 0 25px -4px rgba(245, 158, 11, 0.35); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-white min-h-screen overflow-x-hidden">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    const CURRENCIES = [
+      { code: 'CLP', symbol: '$', name: 'Peso Chileno (CLP)', country: 'Chile', decimals: 0, thousandSeparator: '.', example: '$ 1.200.000' },
+      { code: 'USD', symbol: '$', name: 'Dólar Estadounidense (USD)', country: 'Internacional / USA', decimals: 2, thousandSeparator: ',', example: '$ 12.95' },
+      { code: 'EUR', symbol: '€', name: 'Euro (EUR)', country: 'Unión Europea', decimals: 2, thousandSeparator: '.', example: '1.200,00 €' },
+      { code: 'MXN', symbol: '$', name: 'Peso Mexicano (MXN)', country: 'México', decimals: 2, thousandSeparator: ',', example: '$ 1,250.00' },
+      { code: 'COP', symbol: '$', name: 'Peso Colombiano (COP)', country: 'Colombia', decimals: 0, thousandSeparator: '.', example: '$ 1.200.000' },
+      { code: 'PEN', symbol: 'S/', name: 'Sol Peruano (PEN)', country: 'Perú', decimals: 2, thousandSeparator: ',', example: 'S/ 1,250.00' },
+      { code: 'ARS', symbol: '$', name: 'Peso Argentino (ARS)', country: 'Argentina', decimals: 2, thousandSeparator: '.', example: '$ 1.200,00' },
+    ];
+
+    const DEFAULT_INCOMES = ['Sueldo / Salario', 'Ventas & Clientes', 'Honorarios / Servicios', 'Inversiones & Dividendos', 'Arriendos Cobrados', 'Bonos & Comisiones', 'Otros Ingresos'];
+    const DEFAULT_EXPENSES = ['Arriendo / Hipoteca', 'Luz & Electricidad', 'Agua Potable', 'Gas', 'Internet & Teléfono', 'Supermercado & Alimentos', 'Recreación & Salidas', 'Transporte & Combustible', 'Salud & Seguros', 'Educación & Cursos', 'Suscripciones & Streaming', 'Nómina & Sueldos', 'Mantenimiento', 'Impuestos', 'Otros Gastos'];
+
+    const STARTER_TIPS = [
+      { id: 'tip-1', title: 'Auditoría de Suscripciones & Streaming', category: 'Suscripciones & Streaming', description: 'Revisa apps, plataformas y servicios que no uses semanalmente para cancelar.', estimatedMonthlySavings: 25000, isApplied: false },
+      { id: 'tip-2', title: 'Eficiencia en Luz & Servicios Básicos', category: 'Luz & Electricidad', description: 'Optimizar climatización y apagar equipos en stand-by reduce hasta 15% de la cuenta.', estimatedMonthlySavings: 18000, isApplied: false },
+      { id: 'tip-3', title: 'Renegociación de Plan Internet y Celular', category: 'Internet & Teléfono', description: 'Contacta a tu proveedor cada año; habitualmente ofrecen promociones de retención de 20-30%.', estimatedMonthlySavings: 15000, isApplied: false },
+      { id: 'tip-4', title: 'Compras de Supermercado al por Mayor', category: 'Supermercado & Alimentos', description: 'Comprar alimentos no perecibles en distribuidores mayoristas reduce el costo por kilo.', estimatedMonthlySavings: 40000, isApplied: false },
+    ];
+
+    const GOAL_TEMPLATES = [
+      { title: 'Fondo de Emergencia (3-6 Meses)', targetAmount: 3000000, notes: 'Reserva para imprevistos médicos, laborales o del hogar.', color: '#10B981' },
+      { title: 'Vacaciones & Recreación Familiar', targetAmount: 1500000, notes: 'Ahorro para viajes y descanso libre de deudas.', color: '#6366F1' },
+      { title: 'Renovación de Vehículo / Auto', targetAmount: 5000000, notes: 'Pie o pago total para compra/cambio de auto.', color: '#06B6D4' },
+      { title: 'Pie Inmobiliario / Inversión', targetAmount: 10000000, notes: 'Capital para activos que generen rentas periódicas.', color: '#F59E0B' },
+    ];
+
+    function GastFinApp() {
+      const [activeView, setActiveView] = useState('dashboard');
+      const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+      const [currentCurrency, setCurrentCurrency] = useState(() => {
+        const savedCode = localStorage.getItem('gf_locked_curr_v5');
+        const found = CURRENCIES.find(c => c.code === savedCode);
+        return found || CURRENCIES[0];
+      });
+
+      const [userName, setUserName] = useState(() => {
+        return localStorage.getItem('gf_user_name_v5') || 'Gustavo';
+      });
+
+      const [tempInputName, setTempInputName] = useState(() => {
+        return localStorage.getItem('gf_user_name_v5') || 'Gustavo';
+      });
+
+      const [isCurrencySetupOpen, setIsCurrencySetupOpen] = useState(() => {
+        return localStorage.getItem('gf_curr_locked_v5') !== 'true';
+      });
+
+      const motivationalQuote = "«Cada peso bien administrado hoy es un paso firme hacia tu libertad financiera.»";
+
+      const [transactions, setTransactions] = useState(() => {
+        const saved = localStorage.getItem('gf_tx_v5');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      const [debts, setDebts] = useState(() => {
+        const saved = localStorage.getItem('gf_debts_v5');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      const [goals, setGoals] = useState(() => {
+        const saved = localStorage.getItem('gf_goals_v5');
+        return saved ? JSON.parse(saved) : [];
+      });
+
+      const [savingsTips, setSavingsTips] = useState(() => {
+        const saved = localStorage.getItem('gf_tips_v5');
+        return saved ? JSON.parse(saved) : STARTER_TIPS;
+      });
+
+      // Categories
+      const [incomeCats, setIncomeCats] = useState(DEFAULT_INCOMES);
+      const [expenseCats, setExpenseCats] = useState(DEFAULT_EXPENSES);
+      const [isNewCatOpen, setIsNewCatOpen] = useState(false);
+      const [newCatName, setNewCatName] = useState('');
+
+      // Draggable Floating Window
+      const [isFloatingOpen, setIsFloatingOpen] = useState(false);
+      const [isFloatingMinimized, setIsFloatingMinimized] = useState(false);
+      const [floatingPos, setFloatingPos] = useState({ x: window.innerWidth - 450, y: window.innerHeight - 560 });
+      const [isDragging, setIsDragging] = useState(false);
+      const dragRef = useRef({ startX: 0, startY: 0, initX: 0, initY: 0 });
+
+      const getCurrentDateStr = () => new Date().toISOString().split('T')[0];
+      const getCurrentTimeStr = () => {
+        const now = new Date();
+        return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      };
+
+      // Floating Form with direct live masked input
+      const [fType, setFType] = useState('income');
+      const [fDisplayAmount, setFDisplayAmount] = useState('');
+      const [fRawAmount, setFRawAmount] = useState(0);
+      const [fDesc, setFDesc] = useState('');
+      const [fCat, setFCat] = useState(DEFAULT_INCOMES[0]);
+      const [fDate, setFDate] = useState(getCurrentDateStr());
+      const [fTime, setFTime] = useState(getCurrentTimeStr());
+
+      // Scenarios Target Percentage Slider
+      const [targetPct, setTargetPct] = useState(25);
+
+      // Modals
+      const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+      const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+
+      // Persistence
+      useEffect(() => { localStorage.setItem('gf_tx_v5', JSON.stringify(transactions)); }, [transactions]);
+      useEffect(() => { localStorage.setItem('gf_debts_v5', JSON.stringify(debts)); }, [debts]);
+      useEffect(() => { localStorage.setItem('gf_goals_v5', JSON.stringify(goals)); }, [goals]);
+      useEffect(() => { localStorage.setItem('gf_tips_v5', JSON.stringify(savingsTips)); }, [savingsTips]);
+      useEffect(() => { localStorage.setItem('gf_user_name_v5', userName); }, [userName]);
+
+      const fireCelebration = () => {
+        if (window.confetti) window.confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      };
+
+      const lockCurrencyAndName = (code, name) => {
+        const found = CURRENCIES.find(c => c.code === code);
+        if (found) {
+          setCurrentCurrency(found);
+          localStorage.setItem('gf_locked_curr_v5', found.code);
+          localStorage.setItem('gf_curr_locked_v5', 'true');
+          if (name && name.trim()) {
+            setUserName(name.trim());
+            localStorage.setItem('gf_user_name_v5', name.trim());
+          }
+          setIsCurrencySetupOpen(false);
+          fireCelebration();
+        }
+      };
+
+      const formatBankDate = (dateStr, timeStr) => {
+        if (!dateStr) return '';
+        try {
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const monthName = months[parseInt(parts[1], 10) - 1] || parts[1];
+            const dateFormatted = `${parseInt(parts[2], 10)} ${monthName} ${parts[0]}`;
+            const timeFormatted = timeStr ? `${timeStr} hrs` : '';
+            return `${dateFormatted} • ${timeFormatted}`.replace(/ • $/, '');
+          }
+          return `${dateStr} ${timeStr || ''}`;
+        } catch {
+          return `${dateStr} ${timeStr || ''}`;
+        }
+      };
+
+      // Export to Excel / CSV with UTF-8 BOM
+      const exportDataToExcel = () => {
+        const lines = [];
+        lines.push(`REPORTE FINANCIERO EJECUTIVO - GASTFIN`);
+        lines.push(`Usuario:;${userName || 'Usuario'}`);
+        lines.push(`Fecha de Exportación:;${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`);
+        lines.push(`Moneda Principal:;${currentCurrency.code} (${currentCurrency.name})`);
+        lines.push(``);
+        lines.push(`RESUMEN GENERAL`);
+        lines.push(`Métrica;Monto / Valor`);
+        lines.push(`Ingresos Totales;${metrics.totalIncome}`);
+        lines.push(`Gastos Totales;${metrics.totalExpense}`);
+        lines.push(`Flujo Neto;${metrics.netCashFlow}`);
+        lines.push(`Tasa de Ahorro;${metrics.savingsRate.toFixed(1)}%`);
+        lines.push(`Deuda Total Activa;${metrics.totalDebt}`);
+        lines.push(``);
+        lines.push(`LIBRO DE INGRESOS Y GASTOS`);
+        lines.push(`ID;Tipo;Fecha;Concepto;Categoría;Monto`);
+        transactions.forEach(t => {
+          lines.push(`${t.id};${t.type === 'income' ? 'Ingreso (+)' : 'Gasto (-)'};${t.date};"${t.description.replace(/"/g, '""')}";${t.category};${t.amount}`);
+        });
+        lines.push(``);
+        lines.push(`REGISTRO DE DEUDAS`);
+        lines.push(`ID;Nombre;Acreedor;Saldo;Tasa APR (%);Cuota Mínima`);
+        debts.forEach(d => {
+          lines.push(`${d.id};"${d.name.replace(/"/g, '""')}";"${d.creditor.replace(/"/g, '""')}";${d.remainingAmount};${d.interestRate}%;${d.minimumPayment}`);
+        });
+
+        const csvContent = "\uFEFF" + lines.join("\r\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `GastFin_Reporte_${userName ? userName.replace(/\s+/g, '_') : 'Finanzas'}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        fireCelebration();
+      };
+
+      // Mask Live Input with dots/commas
+      const formatLiveInput = (valStr) => {
+        const code = currentCurrency.code;
+        if (code === 'CLP' || code === 'COP' || code === 'EUR' || code === 'ARS') {
+          const clean = valStr.replace(/[^\d,]/g, '');
+          const parts = clean.split(',');
+          const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          if (parts.length > 1) return `${intPart},${parts[1].slice(0, 2)}`;
+          return intPart;
+        }
+        const clean = valStr.replace(/[^\d.]/g, '');
+        const parts = clean.split('.');
+        const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        if (parts.length > 1) return `${intPart}.${parts[1].slice(0, 2)}`;
+        return intPart;
+      };
+
+      const parseLiveRaw = (valStr) => {
+        if (!valStr) return 0;
+        const code = currentCurrency.code;
+        if (code === 'CLP' || code === 'COP' || code === 'EUR' || code === 'ARS') {
+          return parseFloat(valStr.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+        return parseFloat(valStr.replace(/,/g, '')) || 0;
+      };
+
+      // Formatter for Numbers
+      const formatMoney = (amount) => {
+        const isNegative = amount < 0;
+        const absVal = Math.abs(amount);
+        const symbol = currentCurrency.symbol;
+
+        if (currentCurrency.code === 'CLP' || currentCurrency.code === 'COP') {
+          const hasDec = absVal % 1 !== 0;
+          if (hasDec) {
+            const parts = absVal.toFixed(2).split('.');
+            const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return `${isNegative ? '-' : ''}${symbol} ${intPart},${parts[1]}`;
+          }
+          const formatted = Math.round(absVal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          return `${isNegative ? '-' : ''}${symbol} ${formatted}`;
+        }
+
+        if (currentCurrency.code === 'EUR') {
+          const parts = absVal.toFixed(2).split('.');
+          const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          return `${isNegative ? '-' : ''}${intPart},${parts[1]} ${symbol}`;
+        }
+
+        if (currentCurrency.code === 'ARS') {
+          const parts = absVal.toFixed(2).split('.');
+          const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+          return `${isNegative ? '-' : ''}${symbol} ${intPart},${parts[1]}`;
+        }
+
+        const parts = absVal.toFixed(2).split('.');
+        const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return `${isNegative ? '-' : ''}${symbol} ${intPart}.${parts[1]}`;
+      };
+
+      // Metrics
+      const metrics = useMemo(() => {
+        const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+        const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+        const netCashFlow = totalIncome - totalExpense;
+        const savingsRate = totalIncome > 0 ? Math.max(0, (netCashFlow / totalIncome) * 100) : 0;
+        const totalDebt = debts.reduce((acc, d) => acc + d.remainingAmount, 0);
+        const isDeficit = totalExpense > totalIncome && totalExpense > 0;
+        const deficitAmount = isDeficit ? totalExpense - totalIncome : 0;
+
+        return { totalIncome, totalExpense, netCashFlow, savingsRate, totalDebt, isDeficit, deficitAmount };
+      }, [transactions, debts]);
+
+      // Sueldo Calculation for Simulator
+      const userSalary = metrics.totalIncome > 0 ? metrics.totalIncome : 1200000;
+      const userExpense = metrics.totalExpense > 0 ? metrics.totalExpense : 850000;
+      const currentSavingsAmount = Math.max(0, userSalary - userExpense);
+      const targetMonthlySavings = (userSalary * targetPct) / 100;
+
+      // Drag
+      const onDragStart = (e) => {
+        if (e.target.closest('button, input, select')) return;
+        setIsDragging(true);
+        dragRef.current = { startX: e.clientX, startY: e.clientY, initX: floatingPos.x, initY: floatingPos.y };
+      };
+
+      useEffect(() => {
+        const onDragMove = (e) => {
+          if (!isDragging) return;
+          const dx = e.clientX - dragRef.current.startX;
+          const dy = e.clientY - dragRef.current.startY;
+          setFloatingPos({
+            x: Math.max(10, Math.min(window.innerWidth - 440, dragRef.current.initX + dx)),
+            y: Math.max(10, Math.min(window.innerHeight - 400, dragRef.current.initY + dy))
+          });
+        };
+        const onDragEnd = () => setIsDragging(false);
+
+        if (isDragging) {
+          window.addEventListener('mousemove', onDragMove);
+          window.addEventListener('mouseup', onDragEnd);
+        }
+        return () => {
+          window.removeEventListener('mousemove', onDragMove);
+          window.removeEventListener('mouseup', onDragEnd);
+        };
+      }, [isDragging]);
+
+      const handleFloatingSubmit = (e, addAnother = false) => {
+        e.preventDefault();
+        if (fRawAmount <= 0 || !fDesc.trim()) return;
+
+        const now = new Date();
+        const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        const newTx = {
+          id: `tx-${Date.now()}`,
+          type: fType,
+          amount: fRawAmount,
+          category: fCat,
+          description: fDesc,
+          date: fDate || getCurrentDateStr(),
+          time: fTime || currentTimeStr,
+          createdAt: now.toISOString(),
+          paymentMethod: 'transfer',
+          status: 'completed'
+        };
+
+        setTransactions([newTx, ...transactions]);
+        fireCelebration();
+
+        if (addAnother) {
+          setFDisplayAmount('');
+          setFRawAmount(0);
+          setFDesc('');
+          setFTime(getCurrentTimeStr());
+        } else {
+          setIsFloatingOpen(false);
+          setFDisplayAmount('');
+          setFRawAmount(0);
+          setFDesc('');
+        }
+      };
+
+      return (
+        <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans relative">
+          
+          {/* WELCOME & ONBOARDING MODAL */}
+          {isCurrencySetupOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl">
+              <div className="w-full max-w-xl bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div className="text-center space-y-1 mb-5">
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">¡Bienvenido a GastFin!</span>
+                  <h2 className="text-2xl font-black text-white mt-1">¿Cómo quieres que te llamemos?</h2>
+                  <p className="text-xs text-slate-300">Personalizaremos tus dashboards, métricas y reportes con tu nombre o empresa.</p>
+                </div>
+                
+                <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/90 mb-4 space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-200">Tu Nombre o Nombre de tu Proyecto / Empresa:</label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    placeholder="Ej: Carlos, María, Innova Tech, Mi Negocio..."
+                    value={tempInputName}
+                    onChange={(e) => setTempInputName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <label className="block text-xs font-bold text-slate-300 mb-2">¿En qué divisa principal prefieres trabajar?</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2 max-h-48 overflow-y-auto pr-1">
+                  {CURRENCIES.map(curr => (
+                    <button
+                      key={curr.code}
+                      onClick={() => lockCurrencyAndName(curr.code, tempInputName)}
+                      className={`p-3 rounded-2xl text-left border ${currentCurrency.code === curr.code ? 'bg-emerald-950/40 border-emerald-500 text-white' : 'bg-slate-800/40 border-slate-700 text-slate-300'}`}
+                    >
+                      <div className="flex justify-between font-bold text-xs">
+                        <span>{curr.code} ({curr.symbol})</span>
+                        <span className="text-[10px] text-slate-400">{curr.country}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">{curr.name}</p>
+                      <p className="text-[11px] font-mono font-bold text-emerald-400 mt-1">Ej: {curr.example}</p>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-end pt-3 border-t border-slate-800 mt-4">
+                  <button onClick={() => lockCurrencyAndName(currentCurrency.code, tempInputName)} className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 font-black text-xs shadow-glow-emerald">
+                    ¡Comenzar con GastFin! →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SIDEBAR */}
+          <aside className={`flex flex-col bg-slate-900/95 border-r border-slate-800 transition-all duration-300 z-30 select-none ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+            <div className="flex items-center justify-between h-20 px-5 border-b border-slate-800 cursor-pointer" onClick={() => setActiveView('dashboard')}>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 text-white font-extrabold text-xl shadow-glow-emerald">GF</div>
+                {!isSidebarCollapsed && <div><span className="font-extrabold text-xl text-white">Gast<span className="text-emerald-400">Fin</span></span><p className="text-xs text-slate-400">Control Financiero</p></div>}
+              </div>
+            </div>
+
+            <nav className="flex-1 px-3 py-4 space-y-1.5">
+              {[
+                { id: 'dashboard', label: 'Dashboard Ejecutivo', icon: '📊' },
+                { id: 'transactions', label: 'Ingresos y Gastos', icon: '💸', badge: transactions.length > 0 ? `${transactions.length}` : undefined },
+                { id: 'debts', label: 'Optimizador de Deudas', icon: '💳', badge: debts.length > 0 ? `${debts.length}` : undefined },
+                { id: 'savings', label: 'Asesor de Ahorros IA', icon: '💡' },
+                { id: 'goals', label: 'Metas Financieras', icon: '🎯', badge: goals.length > 0 ? `${goals.length}` : undefined },
+                { id: 'scenarios', label: 'Simulador What-If', icon: '📈' },
+                { id: 'settings', label: 'Configuración & Datos', icon: '⚙️' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveView(item.id)}
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all ${activeView === item.id ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'} ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                  <span>{item.icon}</span>
+                  {!isSidebarCollapsed && <span>{item.label}</span>}
+                </button>
+              ))}
+            </nav>
+
+            {!isSidebarCollapsed && (
+              <div className="p-4 m-3 rounded-2xl bg-slate-800/40 border border-slate-800 text-xs text-slate-400 flex justify-between items-center">
+                <span>Divisa fija:</span>
+                <button onClick={() => setIsCurrencySetupOpen(true)} className="font-bold text-emerald-400 hover:underline">{currentCurrency.code} ({currentCurrency.symbol})</button>
+              </div>
+            )}
+          </aside>
+
+          {/* MAIN */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <header className="sticky top-0 z-20 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 flex items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-extrabold text-white capitalize">{activeView}</h1>
+                <p className="text-xs text-slate-400">GastFin • {userName ? `Hola ${userName} • ` : ''}Moneda: {currentCurrency.code}</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={exportDataToExcel}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 flex items-center gap-1.5 shadow-sm"
+                  title="Descargar datos en Excel"
+                >
+                  <span>📊 Excel</span>
+                </button>
+
+                <button
+                  onClick={() => { setIsFloatingOpen(true); setIsFloatingMinimized(false); }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-extrabold text-xs shadow-glow-emerald"
+                >
+                  <span>Ingreso</span>
+                </button>
+              </div>
+            </header>
+
+            <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+              
+              {/* DASHBOARD */}
+              {activeView === 'dashboard' && (
+                <div className="space-y-6">
+                  
+                  {/* HERO GREETING WITH MOTIVATIONAL QUOTE */}
+                  <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-slate-900/90 to-teal-950/30 border border-emerald-500/40 shadow-card-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl sm:text-2xl font-black text-white">¡Hola, {userName || 'Emprendedor'}! 👋</h2>
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Control Activo</span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-emerald-300/90 italic font-medium">{motivationalQuote}</p>
+                    </div>
+
+                    <button onClick={exportDataToExcel} className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 flex items-center gap-2 self-start md:self-auto shadow-sm">
+                      <span>📊 Exportar a Excel (.csv)</span>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
+                      <span className="text-xs font-semibold text-slate-400 uppercase">Ingresos Totales</span>
+                      <p className="text-2xl font-black text-white mt-1">{formatMoney(metrics.totalIncome)}</p>
+                      <span className="text-xs text-slate-400">{transactions.filter(t => t.type === 'income').length} registros</span>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
+                      <span className="text-xs font-semibold text-slate-400 uppercase">Gastos Totales</span>
+                      <p className="text-2xl font-black text-white mt-1">{formatMoney(metrics.totalExpense)}</p>
+                      <span className="text-xs text-slate-400">{transactions.filter(t => t.type === 'expense').length} egresos</span>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
+                      <span className="text-xs font-semibold text-slate-400 uppercase">Flujo Neto</span>
+                      <p className={`text-2xl font-black mt-1 ${metrics.netCashFlow >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatMoney(metrics.netCashFlow)}</p>
+                      <span className="text-xs text-slate-400">Balance del periodo</span>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
+                      <span className="text-xs font-semibold text-slate-400 uppercase">Tasa de Ahorro</span>
+                      <p className="text-2xl font-black text-white mt-1">{metrics.savingsRate.toFixed(1)}%</p>
+                      <span className="text-[11px] text-slate-400">{transactions.length > 0 ? 'En tiempo real' : 'En espera'}</span>
+                    </div>
+
+                    <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
+                      <span className="text-xs font-semibold text-slate-400 uppercase">Deuda Total</span>
+                      <p className="text-2xl font-black text-amber-400 mt-1">{formatMoney(metrics.totalDebt)}</p>
+                      <span className="text-xs text-amber-400">{debts.length} deudas</span>
+                    </div>
+                  </div>
+
+                  <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800">
+                    <h3 className="font-bold text-white mb-4">Últimos Movimientos</h3>
+                    {transactions.length > 0 ? (
+                      <div className="space-y-2.5">
+                        {transactions.slice(0, 5).map(tx => (
+                          <div key={tx.id} className="flex justify-between items-center p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 hover:bg-slate-800/70 transition-colors">
+                            <div>
+                              <p className="text-xs font-bold text-white">{tx.description}</p>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">{tx.category}</span>
+                                <span>•</span>
+                                <span className="text-slate-300 font-mono text-[10px]">{formatBankDate(tx.date, tx.time)}</span>
+                              </div>
+                            </div>
+                            <span className={`text-xs font-black ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center rounded-2xl bg-slate-800/20 border border-dashed border-slate-800 text-xs text-slate-400">
+                        No hay movimientos registrados aún. Haz clic en "Ingreso" arriba para abrir la ventana de registro.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SCENARIOS & SAVINGS ROADMAP */}
+              {activeView === 'scenarios' && (
+                <div className="space-y-6">
+                  
+                  {/* Top Diagnostics Card */}
+                  <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 text-xl font-bold">📈</span>
+                      <div>
+                        <h2 className="text-lg font-extrabold text-white">Simulador & Planificador de Ahorro Basado en tu Sueldo</h2>
+                        <p className="text-xs text-slate-400">Cálculo de margen de ahorro y hoja de ruta táctica para alcanzar tu objetivo.</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                        <span className="text-xs text-slate-400">Sueldo / Ingreso Registrado</span>
+                        <p className="text-xl font-black text-white mt-1">{formatMoney(userSalary)}</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                        <span className="text-xs text-slate-400">Gastos Registrados</span>
+                        <p className="text-xl font-black text-rose-400 mt-1">{formatMoney(userExpense)}</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                        <span className="text-xs text-slate-400">Ahorro Mensual Actual</span>
+                        <p className="text-xl font-black text-emerald-400 mt-1">{formatMoney(currentSavingsAmount)}</p>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30">
+                        <span className="text-xs text-emerald-300 font-bold">Meta de Ahorro ({targetPct}%)</span>
+                        <p className="text-xl font-black text-emerald-400 mt-1">+{formatMoney(targetMonthlySavings)}/mes</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slider & Roadmap Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="lg:col-span-5 p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-bold text-white text-sm">Meta de Ahorro (% del Sueldo)</h3>
+                        <span className="font-black text-emerald-400 text-base">{targetPct}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="5" 
+                        max="50" 
+                        step="5" 
+                        value={targetPct} 
+                        onChange={(e) => setTargetPct(Number(e.target.value))} 
+                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500" 
+                      />
+
+                      <div className="p-4 rounded-2xl bg-slate-800/40 space-y-2 text-xs">
+                        <h4 className="font-bold text-slate-300 uppercase text-[11px]">Distribución del {targetPct}% Ahorrado:</h4>
+                        <div className="flex justify-between"><span>40% Fondo Emergencia:</span><strong className="text-emerald-400">{formatMoney(targetMonthlySavings * 0.4)}/mes</strong></div>
+                        <div className="flex justify-between"><span>30% Metas & Proyectos:</span><strong className="text-teal-400">{formatMoney(targetMonthlySavings * 0.3)}/mes</strong></div>
+                        <div className="flex justify-between"><span>30% Inversión / Deuda:</span><strong className="text-indigo-400">{formatMoney(targetMonthlySavings * 0.3)}/mes</strong></div>
+                      </div>
+
+                      <div className="pt-2 text-center text-xs space-y-1">
+                        <span className="text-slate-400">Capital Acumulado Proyectado a 12 Meses:</span>
+                        <p className="text-2xl font-black text-emerald-400 font-mono">{formatMoney(targetMonthlySavings * 12)}</p>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-7 p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                      <h3 className="font-bold text-white text-base">Planificación: Cómo Ganar y Retener este {targetPct}%</h3>
+                      
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Fase 1: Optimización de Servicios Fijos</span>
+                        <h4 className="font-bold text-white text-xs mt-1">Auditar cuentas de luz, agua, gas y renegociar planes de internet/celular.</h4>
+                        <p className="text-[11px] text-slate-400">Reduce consumo vampiro y solicita planes de retención anual.</p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Fase 2: Blindaje de Gastos Variables</span>
+                        <h4 className="font-bold text-white text-xs mt-1">Fijar presupuesto semanal para salidas, delivery y compras de supermercado planificadas.</h4>
+                        <p className="text-[11px] text-slate-400">Cancela plataformas de streaming inactivas y compra alimentos no perecibles por mayor.</p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/60 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">Fase 3: Automatización del Aporte</span>
+                        <h4 className="font-bold text-white text-xs mt-1">Transferencia programada el mismo día del pago de sueldo.</h4>
+                        <p className="text-[11px] text-slate-400">Págate a ti mismo primero apartando el {targetPct}% antes de empezar a gastar el mes.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* SAVINGS ADVISOR */}
+              {activeView === 'savings' && (
+                <div className="space-y-6">
+                  <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800">
+                    <h2 className="text-lg font-bold text-white mb-4">💡 Asesor Inteligente de Ahorro & Plan 50/30/20</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-5 rounded-2xl bg-slate-800/40 border border-slate-700 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">50% Necesidades</span>
+                        <p className="text-lg font-black text-rose-400 mt-1">{formatMoney(userSalary * 0.5)}</p>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-slate-800/40 border border-slate-700 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">30% Deseos</span>
+                        <p className="text-lg font-black text-amber-400 mt-1">{formatMoney(userSalary * 0.3)}</p>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-slate-800/40 border border-slate-700 space-y-1">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">20% Ahorro</span>
+                        <p className="text-lg font-black text-emerald-400 mt-1">{formatMoney(userSalary * 0.2)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {savingsTips.map(tip => (
+                      <div key={tip.id} className={`p-5 rounded-2xl border ${tip.isApplied ? 'bg-emerald-950/20 border-emerald-500/40' : 'bg-slate-800/40 border-slate-800'}`}>
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">{tip.category}</span>
+                          <span className="text-xs font-black text-emerald-400">+{formatMoney(tip.estimatedMonthlySavings)}/mes</span>
+                        </div>
+                        <h4 className="font-bold text-white text-sm mt-1">{tip.title}</h4>
+                        <p className="text-xs text-slate-300 mt-1">{tip.description}</p>
+                        <button onClick={() => { setSavingsTips(savingsTips.map(t => t.id === tip.id ? { ...t, isApplied: !t.isApplied } : t)); fireCelebration(); }} className={`mt-3 w-full py-2 rounded-xl text-xs font-bold ${tip.isApplied ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-emerald-500 text-slate-950'}`}>
+                          {tip.isApplied ? '✓ Ahorro Aplicado' : 'Aplicar Ahorro'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* GOALS */}
+              {activeView === 'goals' && (
+                <div className="space-y-6">
+                  <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 flex justify-between items-center">
+                    <div><h2 className="text-lg font-bold text-white">🎯 Metas Financieras</h2><p className="text-xs text-slate-400">Fondos y reservas.</p></div>
+                    <button onClick={() => setIsGoalModalOpen(true)} className="px-3.5 py-2 rounded-xl bg-teal-500 text-slate-950 font-bold text-xs">+ Nueva Meta</button>
+                  </div>
+
+                  {goals.length === 0 ? (
+                    <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                      <h3 className="font-bold text-white text-sm">💡 Plantillas de Metas (1 Clic):</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {GOAL_TEMPLATES.map(tpl => (
+                          <button
+                            key={tpl.title}
+                            onClick={() => { setGoals([...goals, { id: `goal-${Date.now()}`, title: tpl.title, targetAmount: tpl.targetAmount, currentAmount: 0, targetDate: '2027-12-31', color: tpl.color, notes: tpl.notes }]); fireCelebration(); }}
+                            className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700 hover:border-emerald-500 text-left transition-all"
+                          >
+                            <h4 className="font-bold text-white text-xs">{tpl.title}</h4>
+                            <p className="text-[11px] text-slate-400 mt-1">{tpl.notes}</p>
+                            <span className="inline-block mt-2 text-[10px] text-emerald-400 font-bold">+ Activar</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {goals.map(goal => {
+                        const pct = Math.min(100, (goal.currentAmount / goal.targetAmount) * 100);
+                        return (
+                          <div key={goal.id} className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                            <h3 className="font-bold text-white text-base">{goal.title}</h3>
+                            <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden"><div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+                            <div className="flex justify-between text-xs"><span className="font-bold text-white">{formatMoney(goal.currentAmount)}</span><span className="text-slate-400">Meta: {formatMoney(goal.targetAmount)} ({pct.toFixed(0)}%)</span></div>
+                            <button onClick={() => { const amt = prompt(`¿Cuánto abonar a "${goal.title}"?`, '50000'); if (amt && !isNaN(amt)) { setGoals(goals.map(g => g.id === goal.id ? { ...g, currentAmount: g.currentAmount + parseFloat(amt) } : g)); fireCelebration(); } }} className="w-full py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700">+ Aportar Fondos</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TRANSACTIONS */}
+              {activeView === 'transactions' && (
+                <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Libro de Movimientos Bancarios</h2>
+                      <p className="text-xs text-slate-400">Cartola detallada de ingresos y egresos</p>
+                    </div>
+                    <button onClick={() => { setIsFloatingOpen(true); setIsFloatingMinimized(false); }} className="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Ingreso</button>
+                  </div>
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-400 text-xs uppercase">
+                        <th className="py-3 px-4">Fecha & Hora</th>
+                        <th className="py-3 px-4">Concepto</th>
+                        <th className="py-3 px-4">Categoría</th>
+                        <th className="py-3 px-4 text-right">Monto</th>
+                        <th className="py-3 px-4 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60">
+                      {transactions.length === 0 ? (
+                        <tr><td colSpan={5} className="py-8 text-center text-xs text-slate-400">Sin movimientos registrados aún.</td></tr>
+                      ) : (
+                        transactions.map(tx => (
+                          <tr key={tx.id} className="hover:bg-slate-800/40">
+                            <td className="py-3 px-4 text-xs">
+                              <div className="font-bold text-slate-200">{formatBankDate(tx.date, '').split(' • ')[0]}</div>
+                              <div className="text-[11px] text-amber-400 font-mono">{tx.time || '12:00'} hrs</div>
+                            </td>
+                            <td className="py-3 px-4 font-bold text-white">{tx.description}</td>
+                            <td className="py-3 px-4 text-xs text-slate-300">{tx.category}</td>
+                            <td className={`py-3 px-4 text-right font-black ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>{tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}</td>
+                            <td className="py-3 px-4 text-center"><button onClick={() => setTransactions(transactions.filter(t => t.id !== tx.id))} className="text-slate-500 hover:text-rose-400 text-xs font-bold">Eliminar</button></td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* DEBTS & DYNAMIC IDEAS */}
+              {activeView === 'debts' && (
+                <div className="space-y-6">
+                  <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
+                    <div className="flex justify-between items-center flex-wrap gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="p-2 rounded-xl bg-amber-500/10 text-amber-400 text-xl font-bold">💳</span>
+                          <h2 className="text-lg font-extrabold text-white">Optimizador & Estrategia de Deudas IA</h2>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5">Genera ideas de amortización y ahorro de intereses en tiempo real según tus datos.</p>
+                      </div>
+                      <button onClick={() => setIsDebtModalOpen(true)} className="px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs shadow-glow-amber">+ Registrar Deuda</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-5">
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800"><span className="text-xs text-slate-400">Deuda Total Activa</span><p className="text-xl font-black text-amber-400 mt-1">{formatMoney(metrics.totalDebt)}</p></div>
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800"><span className="text-xs text-slate-400">Cuotas Mínimas / Mes</span><p className="text-xl font-bold text-white mt-1">{formatMoney(debts.reduce((acc, d) => acc + d.minimumPayment, 0))}</p></div>
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800"><span className="text-xs text-slate-400">Tasa APR Ponderada</span><p className="text-xl font-bold text-rose-400 mt-1">{debts.length > 0 ? (debts.reduce((acc, d) => acc + (d.remainingAmount * d.interestRate), 0) / Math.max(1, metrics.totalDebt)).toFixed(1) : 0}%</p></div>
+                      <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800"><span className="text-xs text-slate-400">Compromisos</span><p className="text-xl font-bold text-white mt-1">{debts.length} deudas</p></div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Ideas Section */}
+                  <div className="p-6 rounded-3xl bg-indigo-950/30 border border-indigo-500/30 space-y-4">
+                    <h3 className="font-extrabold text-white text-base">💡 Ideas y Recomendaciones Generadas para tus Deudas:</h3>
+                    {debts.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-slate-300">
+                        No hay deudas registradas aún. Haz clic en "+ Registrar Deuda" para que el sistema calcule tu estrategia personalizada.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-2">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">1. Método Avalancha (Mayor Tasa)</span>
+                          <h4 className="font-bold text-white text-xs">{[...debts].sort((a,b)=>b.interestRate-a.interestRate)[0].name} ({[...debts].sort((a,b)=>b.interestRate-a.interestRate)[0].interestRate}% APR)</h4>
+                          <p className="text-[11px] text-slate-300">Concéntrate en abonar dinero extra a esta deuda primero para detener el cobro abusivo de intereses.</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-2">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-teal-500/20 text-teal-300">2. Método Bola de Nieve (Menor Saldo)</span>
+                          <h4 className="font-bold text-white text-xs">{[...debts].sort((a,b)=>a.remainingAmount-b.remainingAmount)[0].name} ({formatMoney([...debts].sort((a,b)=>a.remainingAmount-b.remainingAmount)[0].remainingAmount)})</h4>
+                          <p className="text-[11px] text-slate-300">Liquídala rápidamente para liberar de inmediato {formatMoney([...debts].sort((a,b)=>a.remainingAmount-b.remainingAmount)[0].minimumPayment)} mensuales de flujo de caja.</p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 space-y-2">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">3. Renegociación Bancaria</span>
+                          <h4 className="font-bold text-white text-xs">Solicitud de Reducción de Tasa</h4>
+                          <p className="text-[11px] text-slate-300">Contacta a tu banco y solicita compra de cartera a tasa fija preferencial del 11-13%.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Debts Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {debts.map((debt, index) => (
+                      <div key={debt.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Prioridad #{index+1}</span>
+                          <span className="text-xs font-bold text-rose-400">{debt.interestRate}% APR</span>
+                        </div>
+                        <h4 className="font-bold text-white text-sm">{debt.name}</h4>
+                        <p className="text-xs text-slate-400">{debt.creditor}</p>
+                        <div className="flex justify-between text-xs pt-2 border-t border-slate-800"><span className="text-slate-400">Saldo:</span><strong className="text-amber-400">{formatMoney(debt.remainingAmount)}</strong></div>
+                        <div className="flex justify-between text-xs"><span className="text-slate-400">Cuota:</span><span className="text-slate-200">{formatMoney(debt.minimumPayment)}/mes</span></div>
+                        <button onClick={() => { const amt = prompt(`¿Cuánto abonar a ${debt.name}?`, debt.minimumPayment.toString()); if (amt && !isNaN(amt)) { setDebts(debts.map(d => d.id === debt.id ? { ...d, remainingAmount: Math.max(0, d.remainingAmount - parseFloat(amt)) } : d)); fireCelebration(); } }} className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700">+ Abonar a Capital</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SETTINGS */}
+              {activeView === 'settings' && (
+                <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-6">
+                  <h2 className="text-lg font-bold text-white">Configuración del Sistema</h2>
+                  <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700 flex justify-between items-center">
+                    <div>
+                      <span className="text-xs text-slate-400">Divisa fija:</span>
+                      <h4 className="text-base font-bold text-white">{currentCurrency.code} ({currentCurrency.name})</h4>
+                      <p className="text-xs font-mono text-emerald-400 mt-1">Formato: {currentCurrency.example}</p>
+                    </div>
+                    <button onClick={() => setIsCurrencySetupOpen(true)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-200 border border-slate-600">Cambiar Divisa</button>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
+                    <div><h4 className="text-xs font-bold text-white">Limpiar Todo a Cero</h4><p className="text-[11px] text-slate-400">Elimina los datos para reiniciar.</p></div>
+                    <button onClick={() => { if (confirm('¿Vaciar y dejar todo en cero?')) { setTransactions([]); setDebts([]); setGoals([]); localStorage.clear(); fireCelebration(); } }} className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-300 text-xs font-bold border border-rose-500/30">Limpiar Todo a Cero</button>
+                  </div>
+                </div>
+              )}
+
+            </main>
+          </div>
+
+          {/* MOVABLE FLOATING WINDOW WITH DIRECT AUTOMATIC POINT FORMATTING */}
+          {isFloatingOpen && (
+            isFloatingMinimized ? (
+              <div style={{ position: 'fixed', left: `${floatingPos.x}px`, top: `${floatingPos.y}px`, zIndex: 40 }}>
+                <button onClick={() => setIsFloatingMinimized(false)} className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-900 border-2 border-emerald-500 text-white shadow-glow-emerald text-xs font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>{fType === 'income' ? 'Ingreso' : 'Gasto'}</span>
+                  <span>↗</span>
+                </button>
+              </div>
+            ) : (
+              <div 
+                style={{ position: 'fixed', left: `${floatingPos.x}px`, top: `${floatingPos.y}px`, zIndex: 40 }}
+                className="w-[92vw] sm:w-[430px] bg-slate-900/95 border-2 border-emerald-500/50 rounded-3xl shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden text-slate-100 animate-slide-up"
+              >
+                <div onMouseDown={onDragStart} className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/80 cursor-move select-none" title="Arrastra para mover">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400">✥</span>
+                    <span className="font-extrabold text-xs text-white uppercase tracking-wider">{fType === 'income' ? 'Ingreso' : 'Gasto'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setIsFloatingMinimized(true)} className="p-1 text-slate-400 hover:text-white" title="Minimizar">-</button>
+                    <button onClick={() => setIsFloatingOpen(false)} className="p-1 text-slate-400 hover:text-rose-400" title="Cerrar">✕</button>
+                  </div>
+                </div>
+
+                <form onSubmit={(e) => handleFloatingSubmit(e, false)} className="p-4 sm:p-5 space-y-3.5 text-xs">
+                  <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-800 border border-slate-700">
+                    <button type="button" onClick={() => { setFType('income'); setFCat(incomeCats[0]); }} className={`py-1.5 rounded-lg font-bold ${fType === 'income' ? 'bg-emerald-500 text-slate-950 font-black' : 'text-slate-400'}`}>Ingreso</button>
+                    <button type="button" onClick={() => { setFType('expense'); setFCat(expenseCats[0]); }} className={`py-1.5 rounded-lg font-bold ${fType === 'expense' ? 'bg-rose-500 text-white font-black' : 'text-slate-400'}`}>Gasto</button>
+                  </div>
+
+                  {/* Direct live point formatting */}
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Monto ({currentCurrency.code} {currentCurrency.symbol})</label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">{currentCurrency.symbol}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        required
+                        placeholder="0"
+                        value={fDisplayAmount}
+                        onChange={(e) => {
+                          const fmt = formatLiveInput(e.target.value);
+                          setFDisplayAmount(fmt);
+                          setFRawAmount(parseLiveRaw(fmt));
+                        }}
+                        className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-black text-lg focus:outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-semibold mb-1">Concepto / Descripción</label>
+                    <input type="text" required placeholder={fType === 'income' ? "Ej: Sueldo mensual / Bono" : "Ej: Pago de luz / Arriendo"} value={fDesc} onChange={(e) => setFDesc(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500" />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-slate-300 font-semibold">Categoría Predeterminada</label>
+                      <button type="button" onClick={() => setIsNewCatOpen(!isNewCatOpen)} className="text-[11px] text-emerald-400 font-bold hover:underline">{isNewCatOpen ? 'Elegir existente' : '+ Nueva Categoría'}</button>
+                    </div>
+
+                    {isNewCatOpen ? (
+                      <div className="flex gap-2">
+                        <input type="text" placeholder="Nombre de la nueva categoría..." value={newCatName} onChange={(e) => setNewCatName(e.target.value)} className="flex-1 p-2 rounded-xl bg-slate-800 border border-emerald-500 text-white text-xs" />
+                        <button type="button" onClick={() => { if (newCatName.trim()) { if (fType==='income') setIncomeCats([...incomeCats, newCatName.trim()]); else setExpenseCats([...expenseCats, newCatName.trim()]); setFCat(newCatName.trim()); setNewCatName(''); setIsNewCatOpen(false); } }} className="px-3 py-1 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">Agregar</button>
+                      </div>
+                    ) : (
+                      <select value={fCat} onChange={(e) => setFCat(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs">
+                        {(fType === 'income' ? incomeCats : expenseCats).map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+                  </div>
+                  <div className="pt-2 border-t border-slate-800">
+                    <button type="submit" className="w-full py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shadow-glow-emerald">{fType === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto'}</button>
+                  </div>
+                </form>
+              </div>
+            )
+          )}
+
+          {/* GOAL MODAL */}
+          {isGoalModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+                <h3 className="text-base font-bold text-white mb-3">Crear Meta Financiera</h3>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target;
+                  setGoals([...goals, {
+                    id: `goal-${Date.now()}`,
+                    title: form.title.value,
+                    targetAmount: parseLiveRaw(form.targetAmount.value),
+                    currentAmount: parseLiveRaw(form.currentAmount.value || '0'),
+                    targetDate: form.targetDate.value,
+                    color: '#10B981',
+                    category: 'emergency_fund'
+                  }]);
+                  setIsGoalModalOpen(false);
+                  fireCelebration();
+                }} className="space-y-3 text-xs">
+                  <div><label className="block text-slate-400 mb-1">Título</label><input name="title" type="text" required placeholder="Ej: Fondo de Emergencia / Auto" className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white" /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="block text-slate-400 mb-1">Monto Objetivo ({currentCurrency.symbol})</label><input name="targetAmount" type="text" inputMode="numeric" required placeholder="0" onInput={(e) => e.target.value = formatLiveInput(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold" /></div>
+                    <div><label className="block text-slate-400 mb-1">Ahorrado Inicial</label><input name="currentAmount" type="text" inputMode="numeric" placeholder="0" onInput={(e) => e.target.value = formatLiveInput(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold" /></div>
+                  </div>
+                  <div><label className="block text-slate-400 mb-1">Fecha Objetivo</label><input name="targetDate" type="date" defaultValue="2026-12-31" className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white" /></div>
+                  <div className="flex justify-end gap-2 pt-3"><button type="button" onClick={() => setIsGoalModalOpen(false)} className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300">Cancelar</button><button type="submit" className="px-4 py-2 rounded-xl bg-teal-500 text-slate-950 font-bold">Guardar Meta</button></div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* DEBT MODAL */}
+          {isDebtModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+                <h3 className="text-base font-bold text-white mb-3">Registrar Deuda / Crédito</h3>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target;
+                  setDebts([...debts, {
+                    id: `debt-${Date.now()}`,
+                    name: form.name.value,
+                    creditor: form.creditor.value || 'Banco',
+                    totalAmount: parseLiveRaw(form.totalAmount.value),
+                    remainingAmount: parseLiveRaw(form.totalAmount.value),
+                    interestRate: parseFloat(form.apr.value),
+                    minimumPayment: parseLiveRaw(form.minPay.value),
+                    dueDate: form.dueDate.value,
+                    category: 'bank_loan'
+                  }]);
+                  setIsDebtModalOpen(false);
+                  fireCelebration();
+                }} className="space-y-3 text-xs">
+                  <div><label className="block text-slate-400 mb-1">Concepto</label><input name="name" type="text" required placeholder="Ej: Tarjeta Santander" className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Acreedor</label><input name="creditor" type="text" placeholder="Ej: Banco BBVA" className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white" /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="block text-slate-400 mb-1">Monto ({currentCurrency.symbol})</label><input name="totalAmount" type="text" inputMode="numeric" required placeholder="0" onInput={(e) => e.target.value = formatLiveInput(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold" /></div>
+                    <div><label className="block text-slate-400 mb-1">Tasa (% APR)</label><input name="apr" type="number" step="0.1" defaultValue="14.5" required className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-rose-400 font-bold" /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><label className="block text-slate-400 mb-1">Cuota Mínima</label><input name="minPay" type="text" inputMode="numeric" required placeholder="0" onInput={(e) => e.target.value = formatLiveInput(e.target.value)} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold" /></div>
+                    <div><label className="block text-slate-400 mb-1">Fecha Límite</label><input name="dueDate" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white" /></div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-3"><button type="button" onClick={() => setIsDebtModalOpen(false)} className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300">Cancelar</button><button type="submit" className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Guardar Deuda</button></div>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<GastFinApp />);
+  </script>
+</body>
+</html>

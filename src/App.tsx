@@ -1,0 +1,74 @@
+import React from 'react';
+import { useFinancial } from './context/FinancialContext';
+import { Sidebar } from './components/Sidebar';
+import { Navbar } from './components/Navbar';
+import { DashboardView } from './components/DashboardView';
+import { TransactionsView } from './components/TransactionsView';
+import { DebtCalculatorView } from './components/DebtCalculatorView';
+import { SavingsAdvisorView } from './components/SavingsAdvisorView';
+import { GoalsView } from './components/GoalsView';
+import { ScenariosView } from './components/ScenariosView';
+import { SettingsView } from './components/SettingsView';
+import { TransactionModal } from './components/TransactionModal';
+import { DebtModal } from './components/DebtModal';
+import { GoalModal } from './components/GoalModal';
+import { DeficitAlertModal } from './components/DeficitAlertModal';
+import { CurrencySetupModal } from './components/CurrencySetupModal';
+
+export const AppContent: React.FC = () => {
+  const { activeView } = useFinancial();
+
+  const renderActiveView = () => {
+    switch (activeView) {
+      case 'dashboard':
+        return <DashboardView />;
+      case 'transactions':
+        return <TransactionsView />;
+      case 'debts':
+        return <DebtCalculatorView />;
+      case 'savings':
+        return <SavingsAdvisorView />;
+      case 'goals':
+        return <GoalsView />;
+      case 'scenarios':
+        return <ScenariosView />;
+      case 'settings':
+        return <SettingsView />;
+      default:
+        return <DashboardView />;
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
+      {/* Expandable Left Sidebar */}
+      <Sidebar />
+
+      {/* Main Content Viewport */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden relative">
+        {/* Sticky Executive Navbar */}
+        <Navbar />
+
+        {/* Dynamic View Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {renderActiveView()}
+        </main>
+      </div>
+
+      {/* Floating Non-Blocking Transaction Window */}
+      <TransactionModal />
+
+      {/* Modals & Dialogs */}
+      <DebtModal />
+      <GoalModal />
+      <DeficitAlertModal />
+      <CurrencySetupModal />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return <AppContent />;
+};
+
+export default App;
