@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
+import { useAuth } from './AuthContext';
 import { 
   Transaction, 
   Debt, 
@@ -43,10 +44,12 @@ interface FinancialContextType {
   // Currency & Permanent Selection
   currentCurrency: CurrencyConfig;
   setCurrency: (code: string) => void;
-  isCurrencySetupModalOpen: boolean;
-  setIsCurrencySetupModalOpen: (open: boolean) => void;
   lockAndSetCurrencyAndName: (code: string, name: string) => void;
   unlockCurrencySelector: () => void;
+  isCurrencySetupModalOpen: boolean;
+  setIsCurrencySetupModalOpen: (open: boolean) => void;
+
+  // Formatter helpers
   formatMoney: (amount: number, overrideSymbol?: string) => string;
   formatPercent: (value: number) => string;
 
@@ -110,28 +113,20 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  USER_NAME: 'gastfin_user_name_v3',
-  TRANSACTIONS: 'gastfin_transactions_v3_store',
-  DEBTS: 'gastfin_debts_v3_store',
-  GOALS: 'gastfin_goals_v3_store',
-  SAVINGS_TIPS: 'gastfin_savings_tips_v3_store',
-  CURRENCY: 'gastfin_currency_v3_store',
-  CURRENCY_LOCKED: 'gastfin_currency_locked_v3',
-  THEME: 'gastfin_theme_v3_store',
-  SIDEBAR: 'gastfin_sidebar_collapsed_v3',
-};
-
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser } = useAuth();
+  const activeUserId = currentUser?.uid || 'guest_default';
+
+  const getUserKey = (suffix: string) => `gf_u_${activeUserId}_${suffix}`;
+
   // User name
   const [userName, setUserNameState] = useState<string>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USER_NAME);
-    return saved || '';
+    return currentUser?.displayName || localStorage.getItem(getUserKey('name')) || '';
   });
 
   const setUserName = (name: string) => {
     setUserNameState(name);
-    localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
+    localStorage.setItem(getUserKey('name'), name);
   };
 
   // Motivational quote of the session
@@ -142,13 +137,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+    const saved = localStorage.getItem('gf_theme');
     return saved !== null ? JSON.parse(saved) : true;
   });
 
   // Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR);
+    const saved = localStorage.getItem('gf_sidebar');
     return saved !== null ? JSON.parse(saved) : false;
   });
 
@@ -157,35 +152,35 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Currency & Lock state
   const [currentCurrency, setCurrentCurrency] = useState<CurrencyConfig>(() => {
-    const savedCode = localStorage.getItem(STORAGE_KEYS.CURRENCY);
+    const savedCode = localStorage.getItem(getUserKey('currency'));
     const found = SUPPORTED_CURRENCIES.find(c => c.code === savedCode);
     return found || SUPPORTED_CURRENCIES[0]; // Default CLP/USD
   });
 
   const [isCurrencySetupModalOpen, setIsCurrencySetupModalOpen] = useState<boolean>(() => {
-    const isLocked = localStorage.getItem(STORAGE_KEYS.CURRENCY_LOCKED);
-    const savedName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
-    return isLocked !== 'true' || !savedName; // Open on first launch to ask user for name & currency
+    const isLocked = localStorage.getItem(getUserKey('curr_locked'));
+    const savedName = currentUser?.displayName || localStorage.getItem(getUserKey('name'));
+    return isLocked !== 'true' && !savedName; // Open on first launch if not configured
   });
 
-  // Data collections
+  // Data collections per user
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    const saved = localStorage.getItem(getUserKey('tx'));
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [debts, setDebts] = useState<Debt[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.DEBTS);
-    return saved ? JSON.parse(saved) : INITIAL_DEBTS;
+    const saved = localStorage.getItem(getUserKey('debts'));
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [goals, setGoals] = useState<Goal[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.GOALS);
-    return saved ? JSON.parse(saved) : INITIAL_GOALS;
+    const saved = localStorage.getItem(getUserKey('goals'));
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [savingsTips, setSavingsTips] = useState<SavingsTip[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SAVINGS_TIPS);
+    const saved = localStorage.getItem(getUserKey('tips'));
     return saved ? JSON.parse(saved) : INITIAL_SAVINGS_TIPS;
   });
 
@@ -202,33 +197,61 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
 
-  // Sync with LocalStorage
+  // RELOAD data when user logs in / switches accounts
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions]);
+    if (currentUser?.displayName) {
+      setUserNameState(currentUser.displayName);
+    } else {
+      const savedName = localStorage.getItem(getUserKey('name'));
+      setUserNameState(savedName || '');
+    }
+
+    const txSaved = localStorage.getItem(getUserKey('tx'));
+    setTransactions(txSaved ? JSON.parse(txSaved) : []);
+
+    const debtsSaved = localStorage.getItem(getUserKey('debts'));
+    setDebts(debtsSaved ? JSON.parse(debtsSaved) : []);
+
+    const goalsSaved = localStorage.getItem(getUserKey('goals'));
+    setGoals(goalsSaved ? JSON.parse(goalsSaved) : []);
+
+    const tipsSaved = localStorage.getItem(getUserKey('tips'));
+    setSavingsTips(tipsSaved ? JSON.parse(tipsSaved) : INITIAL_SAVINGS_TIPS);
+
+    const currSaved = localStorage.getItem(getUserKey('currency'));
+    if (currSaved) {
+      const found = SUPPORTED_CURRENCIES.find(c => c.code === currSaved);
+      if (found) setCurrentCurrency(found);
+    }
+  }, [activeUserId]);
+
+  // Sync with LocalStorage per active user
+  useEffect(() => {
+    localStorage.setItem(getUserKey('tx'), JSON.stringify(transactions));
+  }, [transactions, activeUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
-  }, [debts]);
+    localStorage.setItem(getUserKey('debts'), JSON.stringify(debts));
+  }, [debts, activeUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  }, [goals]);
+    localStorage.setItem(getUserKey('goals'), JSON.stringify(goals));
+  }, [goals, activeUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SAVINGS_TIPS, JSON.stringify(savingsTips));
-  }, [savingsTips]);
+    localStorage.setItem(getUserKey('tips'), JSON.stringify(savingsTips));
+  }, [savingsTips, activeUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CURRENCY, currentCurrency.code);
-  }, [currentCurrency]);
+    localStorage.setItem(getUserKey('currency'), currentCurrency.code);
+  }, [currentCurrency, activeUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR, JSON.stringify(isSidebarCollapsed));
+    localStorage.setItem('gf_sidebar', JSON.stringify(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.THEME, JSON.stringify(isDarkMode));
+    localStorage.setItem('gf_theme', JSON.stringify(isDarkMode));
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {

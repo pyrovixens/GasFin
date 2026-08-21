@@ -20,6 +20,7 @@ export interface Transaction {
   tags: string[];
   notes?: string;
   vendorOrClient?: string;
+  userId?: string;
 }
 
 export type DebtCategory = 'bank_loan' | 'credit_card' | 'mortgage' | 'supplier' | 'tax' | 'personal';
@@ -36,6 +37,7 @@ export interface Debt {
   category: DebtCategory;
   notes?: string;
   startDate?: string;
+  userId?: string;
 }
 
 export type GoalCategory = 'emergency_fund' | 'expansion' | 'equipment' | 'investment' | 'tax_reserve' | 'personal';
@@ -51,6 +53,7 @@ export interface Goal {
   iconName: string;
   notes?: string;
   createdAt: string;
+  userId?: string;
 }
 
 export interface SavingsTip {
@@ -63,6 +66,7 @@ export interface SavingsTip {
   difficulty: 'easy' | 'medium' | 'high';
   actionType: 'subscription_audit' | 'supplier_renegotiation' | 'operational_efficiency' | 'energy_telecom' | 'discretionary_cut';
   isApplied: boolean;
+  userId?: string;
 }
 
 export interface CurrencyConfig {
@@ -99,3 +103,22 @@ export type ActiveView =
   | 'goals'
   | 'scenarios'
   | 'settings';
+
+// Multi-user & Authentication Types
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  provider: 'google' | 'password' | 'guest';
+  createdAt: string;
+  lastLoginAt: string;
+  preferredCurrencyCode?: string;
+}
+
+export interface AuthState {
+  currentUser: UserProfile | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  authError: string | null;
+}

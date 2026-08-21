@@ -15,6 +15,7 @@ import { DebtModal } from './components/DebtModal';
 import { GoalModal } from './components/GoalModal';
 import { DeficitAlertModal } from './components/DeficitAlertModal';
 import { CurrencySetupModal } from './components/CurrencySetupModal';
+import { AuthModal } from './components/AuthModal';
 
 export const AppContent: React.FC = () => {
   const { activeView } = useFinancial();
@@ -62,7 +63,8 @@ export const AppContent: React.FC = () => {
       {/* Floating / Responsive Transaction Window */}
       <TransactionModal />
 
-      {/* Modals & Dialogs */}
+      {/* Multi-User & System Modals */}
+      <AuthModal />
       <DebtModal />
       <GoalModal />
       <DeficitAlertModal />
