@@ -47,7 +47,11 @@ export const AuthModal: React.FC = () => {
       if (mode === 'login') {
         const res = await loginWithSupabase(email.trim(), password);
         if (!res.success) {
-          setErrorMsg(res.error || 'Error al iniciar sesión. Verifica tu email y contraseña.');
+          if (res.error?.includes('rate limit')) {
+            setErrorMsg('Límite de correos en Supabase. Desactiva "Confirm email" en Supabase > Authentication > Providers > Email para permitir accesos inmediatos.');
+          } else {
+            setErrorMsg(res.error || 'Error al iniciar sesión. Verifica tu email y contraseña.');
+          }
         } else {
           setSuccessMsg('¡Sesión iniciada con éxito! Sincronizando tus datos...');
           setTimeout(() => setIsAuthModalOpen(false), 1200);
@@ -55,14 +59,22 @@ export const AuthModal: React.FC = () => {
       } else {
         const res = await signupWithSupabase(email.trim(), password, displayName.trim());
         if (!res.success) {
-          setErrorMsg(res.error || 'Error al crear la cuenta en Supabase.');
+          if (res.error?.includes('rate limit')) {
+            setErrorMsg('⚠️ Supabase limitó el envío de emails. Para crear cuentas de inmediato sin límites, ve a tu panel de Supabase > Authentication > Providers > Email y desmarca "Confirm email".');
+          } else {
+            setErrorMsg(res.error || 'Error al crear la cuenta en Supabase.');
+          }
         } else {
           setSuccessMsg('¡Cuenta creada con éxito! Tus datos ahora están en la nube.');
           setTimeout(() => setIsAuthModalOpen(false), 1200);
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Ocurrió un error inesperado de conexión.');
+      if (err.message?.includes('rate limit')) {
+        setErrorMsg('⚠️ Supabase limitó el envío de emails. Desactiva "Confirm email" en tu panel de Supabase (Authentication > Providers > Email).');
+      } else {
+        setErrorMsg(err.message || 'Ocurrió un error inesperado de conexión.');
+      }
     } finally {
       setIsLoading(false);
     }
