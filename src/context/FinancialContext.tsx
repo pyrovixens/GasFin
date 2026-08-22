@@ -240,10 +240,19 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>(() => {
-    const saved = localStorage.getItem('gastfin_scheduled_payments_v6');
+    try {
+      // Purge any legacy sample data stored in the browser
+      localStorage.removeItem('gastfin_scheduled_payments_v6');
+    } catch {}
+
+    const saved = localStorage.getItem('gastfin_scheduled_payments_v7');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Exclude any legacy mock ids to guarantee a 100% clean start from 0
+          return parsed.filter((p: any) => p && !['sp-1', 'sp-2', 'sp-3', 'sp-4'].includes(p.id));
+        }
       } catch {
         return [];
       }
@@ -441,7 +450,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [budgets]);
 
   useEffect(() => {
-    localStorage.setItem('gastfin_scheduled_payments_v6', JSON.stringify(scheduledPayments));
+    localStorage.setItem('gastfin_scheduled_payments_v7', JSON.stringify(scheduledPayments));
   }, [scheduledPayments]);
 
   // Check scheduled payments on mount or data changes to send push reminders
@@ -944,6 +953,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.removeItem(STORAGE_KEYS.DEBTS);
     localStorage.removeItem(STORAGE_KEYS.GOALS);
     localStorage.removeItem(STORAGE_KEYS.SAVINGS_TIPS);
+    localStorage.removeItem('gastfin_scheduled_payments_v7');
     localStorage.removeItem('gastfin_scheduled_payments_v6');
     triggerCelebration();
   };
