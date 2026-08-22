@@ -60,6 +60,7 @@ export const CalendarView: React.FC = () => {
   // Modal State for Scheduled Payment
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<ScheduledPayment | null>(null);
+  const [deleteScheduledTarget, setDeleteScheduledTarget] = useState<{ id: string; title: string } | null>(null);
 
   // Form State
   const [formTitle, setFormTitle] = useState('');
@@ -817,11 +818,7 @@ export const CalendarView: React.FC = () => {
                             <Edit3 size={14} />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`¿Eliminar el gasto programado "${p.title}"?`)) {
-                                deleteScheduledPayment(p.id);
-                              }
-                            }}
+                            onClick={() => setDeleteScheduledTarget({ id: p.id, title: p.title })}
                             className="p-1 text-slate-400 hover:text-rose-400"
                             title="Eliminar gasto"
                           >
@@ -1070,6 +1067,45 @@ export const CalendarView: React.FC = () => {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING CONFIRMATION MODAL: DELETE SCHEDULED PAYMENT */}
+      {deleteScheduledTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <Trash2 size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">¿Eliminar Gasto Programado?</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Se eliminará el recordatorio y pago programado para <strong className="text-white">"{deleteScheduledTarget.title}"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeleteScheduledTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteScheduledPayment(deleteScheduledTarget.id);
+                  setDeleteScheduledTarget(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose"
+              >
+                Eliminar Gasto
+              </button>
+            </div>
           </div>
         </div>
       )}
