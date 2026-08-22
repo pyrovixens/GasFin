@@ -197,8 +197,32 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return saved !== null ? JSON.parse(saved) : false;
   });
 
-  // Active View
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  // Active View with URL Hash and LocalStorage persistence so refresh keeps the exact view
+  const [activeView, setActiveViewState] = useState<ActiveView>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '') as ActiveView;
+      const validViews: ActiveView[] = [
+        'dashboard', 'transactions', 'budgets', 'calendar', 'debts', 
+        'savings', 'goals', 'scenarios', 'compound', 'reports', 'settings'
+      ];
+      if (hash && validViews.includes(hash)) {
+        return hash;
+      }
+      const saved = localStorage.getItem('gastfin_active_view_v1') as ActiveView;
+      if (saved && validViews.includes(saved)) {
+        return saved;
+      }
+    } catch {}
+    return 'dashboard';
+  });
+
+  const setActiveView = (view: ActiveView) => {
+    setActiveViewState(view);
+    try {
+      localStorage.setItem('gastfin_active_view_v1', view);
+      window.history.replaceState(null, '', `#${view}`);
+    } catch {}
+  };
 
   // Currency & Lock state
   const [currentCurrency, setCurrentCurrency] = useState<CurrencyConfig>(() => {
@@ -423,15 +447,21 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
-  const deleteBudget = (id: string) => {
+  const deleteBudget = (idOrCategory: string) => {
+    if (!idOrCategory) return;
+    const normalized = idOrCategory.trim().toLowerCase();
     setBudgets(prev => {
-      const updated = prev.filter(b => b.id !== id && b.category !== id);
+      const updated = prev.filter(b => 
+        b.id !== idOrCategory && 
+        b.category !== idOrCategory && 
+        b.category.trim().toLowerCase() !== normalized
+      );
       try {
         localStorage.setItem('gastfin_budgets_v8', JSON.stringify(updated));
       } catch {}
       return updated;
     });
-    if (supabaseUser) deleteBudgetFromSupabase(id, supabaseUser.id);
+    if (supabaseUser) deleteBudgetFromSupabase(idOrCategory, supabaseUser.id);
   };
 
   const clearAllBudgets = () => {

@@ -100,8 +100,12 @@ export const BudgetsView: React.FC = () => {
       }
     });
 
-    // Include categories that have explicit budgets
-    budgets.forEach(b => categoriesSet.add(b.category));
+    // Include categories that have explicit budgets (unless dismissed)
+    budgets.forEach(b => {
+      if (!dismissedCategories.includes(b.category)) {
+        categoriesSet.add(b.category);
+      }
+    });
 
     const budgetMap = new Map<string, CategoryBudget>();
     budgets.forEach(b => budgetMap.set(b.category, b));
@@ -229,13 +233,18 @@ export const BudgetsView: React.FC = () => {
   // Complete Deletion of an Item / Window
   const handleConfirmDelete = () => {
     if (deleteTarget) {
+      const cat = deleteTarget.category;
       if (deleteTarget.id) {
         deleteBudget(deleteTarget.id);
       }
-      // Also add to dismissed to make sure the window disappears completely from screen
-      const nextDismissed = Array.from(new Set([...dismissedCategories, deleteTarget.category]));
+      deleteBudget(cat);
+
+      // Add to dismissed to make sure the window disappears completely from screen
+      const nextDismissed = Array.from(new Set([...dismissedCategories, cat]));
       setDismissedCategories(nextDismissed);
-      localStorage.setItem('gastfin_dismissed_budget_cats_v1', JSON.stringify(nextDismissed));
+      try {
+        localStorage.setItem('gastfin_dismissed_budget_cats_v1', JSON.stringify(nextDismissed));
+      } catch {}
       setDeleteTarget(null);
     }
   };
