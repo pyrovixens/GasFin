@@ -229,14 +229,23 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
-    const saved = localStorage.getItem('gastfin_budgets_v6');
-    return saved ? JSON.parse(saved) : [
-      { id: 'b-1', category: 'Alimentación & Supermercado', limitAmount: 350000, period: 'monthly', createdAt: new Date().toISOString() },
-      { id: 'b-2', category: 'Servicios Básicos & Hogar', limitAmount: 120000, period: 'monthly', createdAt: new Date().toISOString() },
-      { id: 'b-3', category: 'Restaurantes & Salidas', limitAmount: 90000, period: 'monthly', createdAt: new Date().toISOString() },
-      { id: 'b-4', category: 'Transporte & Combustible', limitAmount: 80000, period: 'monthly', createdAt: new Date().toISOString() },
-      { id: 'b-5', category: 'Suscripciones & Ocio', limitAmount: 40000, period: 'monthly', createdAt: new Date().toISOString() },
-    ];
+    try {
+      localStorage.removeItem('gastfin_budgets_v6');
+      localStorage.removeItem('gastfin_custom_budget_base');
+    } catch {}
+
+    const saved = localStorage.getItem('gastfin_budgets_v7');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((b: any) => b && !['b-1', 'b-2', 'b-3', 'b-4', 'b-5'].includes(b.id));
+        }
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>(() => {
@@ -446,7 +455,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [savingsTips]);
 
   useEffect(() => {
-    localStorage.setItem('gastfin_budgets_v6', JSON.stringify(budgets));
+    localStorage.setItem('gastfin_budgets_v7', JSON.stringify(budgets));
   }, [budgets]);
 
   useEffect(() => {
@@ -949,10 +958,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setGoals([]);
     setSavingsTips([]);
     setScheduledPayments([]);
+    setBudgets([]);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.DEBTS);
     localStorage.removeItem(STORAGE_KEYS.GOALS);
     localStorage.removeItem(STORAGE_KEYS.SAVINGS_TIPS);
+    localStorage.removeItem('gastfin_budgets_v7');
+    localStorage.removeItem('gastfin_budgets_v6');
+    localStorage.removeItem('gastfin_custom_budget_base');
     localStorage.removeItem('gastfin_scheduled_payments_v7');
     localStorage.removeItem('gastfin_scheduled_payments_v6');
     triggerCelebration();
