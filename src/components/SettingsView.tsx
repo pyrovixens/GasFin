@@ -186,12 +186,12 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Cloud Database & Supabase Multi-user Sync */}
+      {/* Cloud Database & Multi-user Sync */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Cloud size={18} className="text-emerald-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Base de Datos en la Nube (Supabase)</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Servidor Seguro en la Nube (GastFin Cloud)</h3>
           </div>
           <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
             supabaseUser 
@@ -204,7 +204,7 @@ export const SettingsView: React.FC = () => {
 
         <p className="text-xs text-slate-400">
           {supabaseUser 
-            ? `Conectado como ${supabaseUser.email}. Todos tus movimientos, presupuestos y metas se sincronizan en tiempo real con Supabase PostgreSQL.` 
+            ? `Conectado como ${supabaseUser.email}. Todos tus movimientos, presupuestos y metas se sincronizan en tiempo real y cifrados de extremo a extremo.` 
             : 'Conecta tu cuenta para guardar tus finanzas en la nube y acceder desde tu PC, teléfono Android o iPhone.'}
         </p>
 

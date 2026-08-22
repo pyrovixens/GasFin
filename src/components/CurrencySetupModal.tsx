@@ -47,7 +47,7 @@ export const CurrencySetupModal: React.FC = () => {
           </h2>
 
           <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-            Puedes sincronizar tus datos en la nube con Supabase o comenzar de inmediato en modo local.
+            Puedes sincronizar tus datos en la nube de GastFin o comenzar de inmediato en modo local.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export const CurrencySetupModal: React.FC = () => {
               </span>
             </div>
             <p className="text-[11px] text-slate-300">
-              Inicia sesión o crea tu cuenta gratuita para guardar tus finanzas en la base de datos Supabase en tiempo real.
+              Inicia sesión o crea tu cuenta gratuita para guardar tus finanzas en el servidor seguro en tiempo real.
             </p>
             <button
               type="button"

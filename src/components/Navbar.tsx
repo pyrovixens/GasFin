@@ -103,7 +103,7 @@ export const Navbar: React.FC = () => {
               ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/40'
               : 'bg-slate-800/80 border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-700'
           }`}
-          title={supabaseUser ? `Conectado a la Nube (${supabaseUser.email})` : 'Conectar con Supabase'}
+          title={supabaseUser ? `Conectado a la Nube (${supabaseUser.email})` : 'Conectar con la Nube'}
         >
           <Cloud size={15} className={supabaseUser ? 'text-emerald-400' : 'text-slate-400'} />
           <span className="hidden sm:inline">{supabaseUser ? 'Nube Activa' : 'Sincronizar'}</span>

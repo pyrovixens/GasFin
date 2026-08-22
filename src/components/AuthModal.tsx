@@ -48,9 +48,9 @@ export const AuthModal: React.FC = () => {
         const res = await loginWithSupabase(email.trim(), password);
         if (!res.success) {
           if (res.error?.includes('rate limit')) {
-            setErrorMsg('Límite de correos en Supabase. Desactiva "Confirm email" en Supabase > Authentication > Providers > Email para permitir accesos inmediatos.');
+            setErrorMsg('Límite de solicitudes alcanzado. Por favor espera un momento e intenta nuevamente.');
           } else {
-            setErrorMsg(res.error || 'Error al iniciar sesión. Verifica tu email y contraseña.');
+            setErrorMsg(res.error || 'Error al iniciar sesión. Verifica tu correo y contraseña.');
           }
         } else {
           setSuccessMsg('¡Sesión iniciada con éxito! Sincronizando tus datos...');
@@ -60,20 +60,20 @@ export const AuthModal: React.FC = () => {
         const res = await signupWithSupabase(email.trim(), password, displayName.trim());
         if (!res.success) {
           if (res.error?.includes('rate limit')) {
-            setErrorMsg('⚠️ Supabase limitó el envío de emails. Para crear cuentas de inmediato sin límites, ve a tu panel de Supabase > Authentication > Providers > Email y desmarca "Confirm email".');
+            setErrorMsg('⚠️ Límite temporal alcanzado. Por favor intenta en unos minutos.');
           } else {
-            setErrorMsg(res.error || 'Error al crear la cuenta en Supabase.');
+            setErrorMsg(res.error || 'Error al crear la cuenta en el servidor.');
           }
         } else {
-          setSuccessMsg('¡Cuenta creada con éxito! Tus datos ahora están en la nube.');
+          setSuccessMsg('¡Cuenta creada con éxito! Tus datos ahora están respaldados en la nube.');
           setTimeout(() => setIsAuthModalOpen(false), 1200);
         }
       }
     } catch (err: any) {
       if (err.message?.includes('rate limit')) {
-        setErrorMsg('⚠️ Supabase limitó el envío de emails. Desactiva "Confirm email" en tu panel de Supabase (Authentication > Providers > Email).');
+        setErrorMsg('⚠️ Límite temporal alcanzado. Intenta nuevamente.');
       } else {
-        setErrorMsg(err.message || 'Ocurrió un error inesperado de conexión.');
+        setErrorMsg(err.message || 'Ocurrió un error inesperado de conexión con el servidor.');
       }
     } finally {
       setIsLoading(false);
@@ -96,7 +96,7 @@ export const AuthModal: React.FC = () => {
         <div className="text-center space-y-2 mb-6">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
             <Cloud size={14} className="text-emerald-400" />
-            <span>Supabase Cloud Sync</span>
+            <span>GastFin Cloud Sync</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
@@ -105,7 +105,7 @@ export const AuthModal: React.FC = () => {
 
           <p className="text-xs text-slate-400">
             {supabaseUser
-              ? 'Tus datos están conectados y protegidos en tiempo real con Supabase PostgreSQL.'
+              ? 'Tus datos están conectados y protegidos en tiempo real en tu servidor seguro.'
               : 'Accede a tus movimientos, presupuestos y metas desde tu PC, celular o web.'}
           </p>
         </div>
@@ -118,7 +118,7 @@ export const AuthModal: React.FC = () => {
                 <span className="text-xs text-slate-400">Estado de Conexión:</span>
                 <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400">
                   <CheckCircle2 size={14} />
-                  <span>En Línea (Supabase)</span>
+                  <span>En Línea (Nube Activa)</span>
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
@@ -238,7 +238,7 @@ export const AuthModal: React.FC = () => {
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <span>Conectando con Supabase...</span>
+                    <span>Conectando con el servidor seguro...</span>
                   ) : (
                     <>
                       <span>{mode === 'login' ? 'Acceder a mi Cuenta' : 'Registrar y Sincronizar'}</span>
