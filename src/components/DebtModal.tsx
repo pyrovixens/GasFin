@@ -53,11 +53,13 @@ export const DebtModal: React.FC = () => {
     if (editingDebt) {
       setName(editingDebt.name);
       setCreditor(editingDebt.creditor);
-      setRawTotal(editingDebt.remainingAmount);
-      setDisplayTotal(formatInputLive(editingDebt.remainingAmount.toString(), currentCurrency.code));
-      setInterestRate(editingDebt.interestRate.toString());
-      setRawMinPay(editingDebt.minimumPayment);
-      setDisplayMinPay(formatInputLive(editingDebt.minimumPayment.toString(), currentCurrency.code));
+      const safeRemaining = editingDebt.remainingAmount ?? 0;
+      setRawTotal(safeRemaining);
+      setDisplayTotal(formatInputLive(safeRemaining.toString(), currentCurrency.code));
+      setInterestRate((editingDebt.interestRate ?? 0).toString());
+      const safeMinPay = editingDebt.minimumPayment ?? 0;
+      setRawMinPay(safeMinPay);
+      setDisplayMinPay(formatInputLive(safeMinPay.toString(), currentCurrency.code));
       setDueDate(editingDebt.dueDate);
       setCategory(editingDebt.category);
       setNotes(editingDebt.notes || '');

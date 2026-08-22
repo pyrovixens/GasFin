@@ -28,11 +28,11 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
 
     const transactions: Transaction[] = (txRes.data || []).map((t: any) => ({
       id: t.id,
-      type: t.type,
-      amount: Number(t.amount),
-      category: t.category,
-      description: t.description,
-      date: t.date,
+      type: t.type || 'expense',
+      amount: Number(t.amount || 0),
+      category: t.category || 'Varios',
+      description: t.description || '',
+      date: t.date || new Date().toISOString().split('T')[0],
       time: t.time || '12:00',
       paymentMethod: t.payment_method || 'card',
       status: t.status || 'completed',
@@ -44,10 +44,10 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
 
     const debts: Debt[] = (debtsRes.data || []).map((d: any) => ({
       id: d.id,
-      name: d.name,
-      creditor: d.creditor,
-      totalAmount: Number(d.total_amount),
-      remainingAmount: Number(d.remaining_amount),
+      name: d.name || '',
+      creditor: d.creditor || '',
+      totalAmount: Number(d.total_amount || 0),
+      remainingAmount: Number(d.remaining_amount ?? d.total_amount ?? 0),
       interestRate: Number(d.interest_rate || 0),
       minimumPayment: Number(d.minimum_payment || 0),
       dueDate: d.due_date || '15',
@@ -57,9 +57,9 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
 
     const goals: Goal[] = (goalsRes.data || []).map((g: any) => ({
       id: g.id,
-      title: g.title,
+      title: g.title || '',
       category: g.category || 'personal',
-      targetAmount: Number(g.target_amount),
+      targetAmount: Number(g.target_amount || 0),
       currentAmount: Number(g.current_amount || 0),
       targetDate: g.target_date || '',
       color: g.color || '#10B981',
@@ -70,8 +70,8 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
 
     const budgets: CategoryBudget[] = (budgetsRes.data || []).map((b: any) => ({
       id: b.id,
-      category: b.category,
-      limitAmount: Number(b.limit_amount),
+      category: b.category || '',
+      limitAmount: Number(b.limit_amount || 0),
       period: 'monthly',
       createdAt: b.created_at || new Date().toISOString(),
     }));

@@ -51,10 +51,12 @@ export const GoalModal: React.FC = () => {
   useEffect(() => {
     if (editingGoal) {
       setTitle(editingGoal.title);
-      setRawTarget(editingGoal.targetAmount);
-      setDisplayTarget(formatInputLive(editingGoal.targetAmount.toString(), currentCurrency.code));
-      setRawCurrent(editingGoal.currentAmount);
-      setDisplayCurrent(formatInputLive(editingGoal.currentAmount.toString(), currentCurrency.code));
+      const safeTarget = editingGoal.targetAmount ?? 0;
+      setRawTarget(safeTarget);
+      setDisplayTarget(formatInputLive(safeTarget.toString(), currentCurrency.code));
+      const safeCurrent = editingGoal.currentAmount ?? 0;
+      setRawCurrent(safeCurrent);
+      setDisplayCurrent(formatInputLive(safeCurrent.toString(), currentCurrency.code));
       setTargetDate(editingGoal.targetDate);
       setCategory(editingGoal.category);
       setColor(editingGoal.color);

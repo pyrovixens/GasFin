@@ -575,7 +575,7 @@ export const DebtCalculatorView: React.FC = () => {
                     <button
                       onClick={() => {
                         setPayingDebt(debt);
-                        setPaymentAmount(debt.minimumPayment.toString());
+                        setPaymentAmount((debt.minimumPayment ?? 0).toString());
                       }}
                       className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-1.5"
                     >
@@ -617,14 +617,14 @@ export const DebtCalculatorView: React.FC = () => {
                 <div className="flex gap-2 mt-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentAmount(payingDebt.minimumPayment.toString())}
+                    onClick={() => setPaymentAmount((payingDebt.minimumPayment ?? 0).toString())}
                     className="text-[11px] px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
                   >
                     Cuota Mínima ({formatMoney(payingDebt.minimumPayment)})
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentAmount(payingDebt.remainingAmount.toString())}
+                    onClick={() => setPaymentAmount((payingDebt.remainingAmount ?? 0).toString())}
                     className="text-[11px] px-2 py-1 rounded bg-slate-800 text-emerald-400 hover:bg-slate-700"
                   >
                     Liquidar Todo ({formatMoney(payingDebt.remainingAmount)})

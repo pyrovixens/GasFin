@@ -94,8 +94,9 @@ export const TransactionModal: React.FC = () => {
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
-      setRawAmount(editingTransaction.amount);
-      const formatted = formatInputLive(editingTransaction.amount.toString(), currentCurrency.code);
+      const safeAmt = editingTransaction.amount ?? 0;
+      setRawAmount(safeAmt);
+      const formatted = formatInputLive(safeAmt.toString(), currentCurrency.code);
       setDisplayAmount(formatted);
       setCategory(editingTransaction.category);
       setDescription(editingTransaction.description);

@@ -462,42 +462,43 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Custom Amount Formatter
-  const formatMoney = (amount: number, overrideSymbol?: string) => {
-    const symbol = overrideSymbol !== undefined ? overrideSymbol : currentCurrency.symbol;
-    const isNegative = amount < 0;
-    const absVal = Math.abs(amount);
+  const formatMoney = (amount: number | undefined | null, overrideSymbol?: string) => {
+    const symbol = overrideSymbol !== undefined ? overrideSymbol : (currentCurrency?.symbol || '$');
+    const safeAmount = (amount === undefined || amount === null || isNaN(Number(amount))) ? 0 : Number(amount);
+    const isNegative = safeAmount < 0;
+    const absVal = Math.abs(safeAmount);
 
     let formattedNumber = '';
 
-    if (currentCurrency.code === 'CLP' || currentCurrency.code === 'COP') {
+    if (currentCurrency?.code === 'CLP' || currentCurrency?.code === 'COP') {
       const hasDecimals = absVal % 1 !== 0;
       if (hasDecimals) {
         const parts = absVal.toFixed(2).split('.');
-        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        formattedNumber = `${integerPart},${parts[1]}`;
+        const integerPart = (parts[0] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        formattedNumber = `${integerPart},${parts[1] || '00'}`;
       } else {
         formattedNumber = Math.round(absVal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       }
       return `${isNegative ? '-' : ''}${symbol} ${formattedNumber}`;
     }
 
-    if (currentCurrency.code === 'EUR') {
+    if (currentCurrency?.code === 'EUR') {
       const parts = absVal.toFixed(2).split('.');
-      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      formattedNumber = `${integerPart},${parts[1]}`;
+      const integerPart = (parts[0] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      formattedNumber = `${integerPart},${parts[1] || '00'}`;
       return `${isNegative ? '-' : ''}${formattedNumber} ${symbol}`;
     }
 
-    if (currentCurrency.code === 'ARS') {
+    if (currentCurrency?.code === 'ARS') {
       const parts = absVal.toFixed(2).split('.');
-      const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      formattedNumber = `${integerPart},${parts[1]}`;
+      const integerPart = (parts[0] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      formattedNumber = `${integerPart},${parts[1] || '00'}`;
       return `${isNegative ? '-' : ''}${symbol} ${formattedNumber}`;
     }
 
     const parts = absVal.toFixed(2).split('.');
-    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    formattedNumber = `${integerPart}.${parts[1]}`;
+    const integerPart = (parts[0] || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    formattedNumber = `${integerPart}.${parts[1] || '00'}`;
     return `${isNegative ? '-' : ''}${symbol} ${formattedNumber}`;
   };
 

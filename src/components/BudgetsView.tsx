@@ -71,7 +71,7 @@ export const BudgetsView: React.FC = () => {
   const handleOpenEdit = (b: { id: string; category: string; limitAmount: number }) => {
     setEditingBudgetId(b.id);
     setCategoryInput(b.category);
-    setLimitInput(b.limitAmount.toString());
+    setLimitInput((b.limitAmount ?? 0).toString());
     setIsModalOpen(true);
   };
 
