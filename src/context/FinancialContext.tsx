@@ -256,13 +256,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
     try {
       // Purge all legacy stored budgets to start clean from 0
+      localStorage.removeItem('gastfin_budgets_v8');
       localStorage.removeItem('gastfin_budgets_v7');
       localStorage.removeItem('gastfin_budgets_v6');
       localStorage.removeItem('gastfin_custom_budget_base');
       localStorage.removeItem('gastfin_custom_budget_base_v7');
     } catch {}
 
-    const saved = localStorage.getItem('gastfin_budgets_v8');
+    const saved = localStorage.getItem('gastfin_budgets_v9');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -457,7 +458,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         b.category.trim().toLowerCase() !== normalized
       );
       try {
-        localStorage.setItem('gastfin_budgets_v8', JSON.stringify(updated));
+        localStorage.setItem('gastfin_budgets_v9', JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -466,6 +467,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const clearAllBudgets = () => {
     setBudgets([]);
+    localStorage.removeItem('gastfin_budgets_v9');
     localStorage.removeItem('gastfin_budgets_v8');
     localStorage.removeItem('gastfin_budgets_v7');
     localStorage.removeItem('gastfin_budgets_v6');
@@ -505,7 +507,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [savingsTips]);
 
   useEffect(() => {
-    localStorage.setItem('gastfin_budgets_v8', JSON.stringify(budgets));
+    localStorage.setItem('gastfin_budgets_v9', JSON.stringify(budgets));
   }, [budgets]);
 
   useEffect(() => {
