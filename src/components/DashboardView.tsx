@@ -19,7 +19,8 @@ import {
   FilePlus,
   Compass,
   FileSpreadsheet,
-  User
+  User,
+  Clock
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -47,6 +48,7 @@ export const DashboardView: React.FC = () => {
     debts, 
     goals, 
     budgets,
+    scheduledPayments,
     savingsTips, 
     toggleSavingsTip,
     openTransactionModal, 
@@ -109,6 +111,25 @@ export const DashboardView: React.FC = () => {
 
     return { exceeded, warning, totalAlerts: exceeded.length + warning.length };
   }, [budgets, transactions]);
+
+  // Scheduled Payments Due Reminder (<= 5 days or overdue)
+  const upcomingScheduledPayments = useMemo(() => {
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+    return scheduledPayments.filter(p => {
+      if (p.status === 'paid' || !p.dueDate) return false;
+      const [y, m, d] = p.dueDate.split('-').map(Number);
+      const dueMidnight = new Date(y, m - 1, d).getTime();
+      const diff = Math.ceil((dueMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+      return diff <= (p.notifyDaysBefore || 5);
+    }).map(p => {
+      const [y, m, d] = p.dueDate.split('-').map(Number);
+      const dueMidnight = new Date(y, m - 1, d).getTime();
+      const diff = Math.ceil((dueMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+      return { ...p, diffDays: diff };
+    }).sort((a, b) => a.diffDays - b.diffDays);
+  }, [scheduledPayments]);
 
   // Recent transactions
   const recentTransactions = useMemo(() => {
@@ -204,6 +225,40 @@ export const DashboardView: React.FC = () => {
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 hover:border-slate-600 transition-colors flex items-center gap-1.5 flex-shrink-0 self-start sm:self-auto"
           >
             <span>Ver Límites de Gasto</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Scheduled Payments Due Reminder Banner (<= 5 days) */}
+      {upcomingScheduledPayments.length > 0 && (
+        <div className="rounded-3xl p-4 sm:p-5 border-2 border-indigo-500/60 bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-900 text-white shadow-glow-indigo flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-2.5 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex-shrink-0 animate-pulse">
+              <Clock size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500 text-white">
+                  🔔 Recordatorio de Pagos Programados
+                </span>
+                <span className="text-[10px] font-bold text-indigo-300">
+                  {upcomingScheduledPayments.length} {upcomingScheduledPayments.length === 1 ? 'cuenta por vencer' : 'cuentas por vencer'}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white mt-1">
+                {upcomingScheduledPayments.slice(0, 2).map(p => `${p.title} (${formatMoney(p.amount)} • ${p.diffDays === 0 ? '¡Hoy!' : p.diffDays < 0 ? 'Vencido' : `en ${p.diffDays}d`})`).join('  |  ')}
+              </p>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Total por pagar en vencimientos próximos: <strong>{formatMoney(upcomingScheduledPayments.reduce((acc, p) => acc + p.amount, 0))}</strong>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveView('calendar')}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 flex-shrink-0 self-start sm:self-auto"
+          >
+            <span>Ver Calendario & Pagos</span>
             <ChevronRight size={14} />
           </button>
         </div>

@@ -56,6 +56,26 @@ export interface Goal {
   userId?: string;
 }
 
+export type ScheduledRecurrence = 'once' | 'monthly' | 'biweekly' | 'weekly' | 'yearly';
+
+export type ScheduledStatus = 'pending' | 'paid' | 'overdue';
+
+export interface ScheduledPayment {
+  id: string;
+  title: string;
+  amount: number;
+  category: string;
+  dueDate: string; // YYYY-MM-DD
+  recurrence: ScheduledRecurrence;
+  notifyDaysBefore: number; // 0 for same day, 1, 3, 5, 7, 10, 15 days before
+  autoNotifyPush: boolean;
+  status: ScheduledStatus;
+  notes?: string;
+  createdAt: string;
+  lastPaidDate?: string;
+  userId?: string;
+}
+
 export interface CategoryBudget {
   id: string;
   category: string;

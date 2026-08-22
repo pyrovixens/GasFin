@@ -5,6 +5,7 @@ import {
   Debt, 
   Goal, 
   CategoryBudget,
+  ScheduledPayment,
   SavingsTip, 
   CurrencyConfig, 
   FinancialMetrics, 
@@ -19,6 +20,13 @@ import {
   formatCurrencyInputLive,
   parseCurrencyInputRaw
 } from '../data/initialData';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendBrowserNotification,
+  hasPaymentBeenNotifiedToday,
+  markPaymentAsNotifiedToday
+} from '../services/notificationService';
 import { 
   supabase, 
   fetchUserDataFromSupabase, 
@@ -138,7 +146,15 @@ interface FinancialContextType {
   isGoalModalOpen: boolean;
   openGoalModal: (goal?: Goal) => void;
   closeGoalModal: () => void;
-  editingGoal: Goal | null;
+  // Scheduled Payments & Reminders / Gastos Programados
+  scheduledPayments: ScheduledPayment[];
+  addScheduledPayment: (payment: Omit<ScheduledPayment, 'id' | 'createdAt'>) => void;
+  updateScheduledPayment: (id: string, payment: Partial<Omit<ScheduledPayment, 'id' | 'createdAt'>>) => void;
+  deleteScheduledPayment: (id: string) => void;
+  markScheduledPaymentAsPaid: (id: string, createExpenseTx?: boolean) => void;
+  notificationPermission: NotificationPermission;
+  requestPushPermission: () => Promise<NotificationPermission>;
+  testPushNotification: (payment?: ScheduledPayment) => void;
 
   // System actions & Excel Export
   clearAllDataToZero: () => void;
@@ -221,6 +237,78 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       { id: 'b-4', category: 'Transporte & Combustible', limitAmount: 80000, period: 'monthly', createdAt: new Date().toISOString() },
       { id: 'b-5', category: 'Suscripciones & Ocio', limitAmount: 40000, period: 'monthly', createdAt: new Date().toISOString() },
     ];
+  });
+
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>(() => {
+    const saved = localStorage.getItem('gastfin_scheduled_payments_v6');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+    return [
+      {
+        id: 'sp-1',
+        title: 'Arriendo / Dividendo Hogar',
+        amount: 450000,
+        category: 'Arriendo / Hipoteca',
+        dueDate: `${currentYear}-${currentMonth}-05`,
+        recurrence: 'monthly',
+        notifyDaysBefore: 5,
+        autoNotifyPush: true,
+        status: 'pending',
+        notes: 'Transferencia bancaria al arrendador.',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'sp-2',
+        title: 'Luz & Electricidad (Enel)',
+        amount: 38000,
+        category: 'Luz & Electricidad',
+        dueDate: `${currentYear}-${currentMonth}-15`,
+        recurrence: 'monthly',
+        notifyDaysBefore: 3,
+        autoNotifyPush: true,
+        status: 'pending',
+        notes: 'Pago automático con tarjeta o cuenta RUT.',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'sp-3',
+        title: 'Internet Fibra Óptica & Móvil',
+        amount: 29990,
+        category: 'Internet & Teléfono',
+        dueDate: `${currentYear}-${currentMonth}-20`,
+        recurrence: 'monthly',
+        notifyDaysBefore: 5,
+        autoNotifyPush: true,
+        status: 'pending',
+        notes: 'Vence el 20 de cada mes.',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'sp-4',
+        title: 'Suscripciones Streaming & Cloud',
+        amount: 14990,
+        category: 'Suscripciones & Streaming',
+        dueDate: `${currentYear}-${currentMonth}-28`,
+        recurrence: 'monthly',
+        notifyDaysBefore: 2,
+        autoNotifyPush: true,
+        status: 'pending',
+        notes: 'Cargado a tarjeta de crédito.',
+        createdAt: new Date().toISOString(),
+      }
+    ];
+  });
+
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    return getNotificationPermission();
   });
 
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
@@ -407,6 +495,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     localStorage.setItem('gastfin_budgets_v6', JSON.stringify(budgets));
   }, [budgets]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_scheduled_payments_v6', JSON.stringify(scheduledPayments));
+  }, [scheduledPayments]);
+
+  // Check scheduled payments on mount or data changes to send push reminders
+  useEffect(() => {
+    checkAndTriggerPaymentNotifications();
+    // Also check periodically every hour while the app is active
+    const timer = setInterval(() => {
+      checkAndTriggerPaymentNotifications();
+    }, 60 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [scheduledPayments]);
 
   useEffect(() => {
     localStorage.setItem('gastfin_currency_v6', currentCurrency.code);
@@ -768,6 +870,126 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setEditingGoal(null);
   };
 
+  // Scheduled Payments & Reminders Actions
+  const checkAndTriggerPaymentNotifications = () => {
+    if (!scheduledPayments || scheduledPayments.length === 0) return;
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    scheduledPayments.forEach(p => {
+      if (p.status === 'paid' || !p.autoNotifyPush) return;
+      if (!p.dueDate) return;
+
+      const [pYear, pMonth, pDay] = p.dueDate.split('-').map(Number);
+      const dueMidnight = new Date(pYear, pMonth - 1, pDay).getTime();
+      const diffDays = Math.ceil((dueMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+
+      // If due within the configured notification window (e.g. <= 5 days before, and not far in the past)
+      if (diffDays <= (p.notifyDaysBefore ?? 5) && diffDays >= 0) {
+        if (!hasPaymentBeenNotifiedToday(p.id)) {
+          const daysText = diffDays === 0 ? '¡VENCE HOY!' : `Vence en ${diffDays} ${diffDays === 1 ? 'día' : 'días'} (${p.dueDate})`;
+          const formattedAmt = formatMoney(p.amount);
+          
+          sendBrowserNotification({
+            title: `🔔 Recordatorio de Pago: ${p.title}`,
+            body: `${daysText} • Monto: ${formattedAmt}. Recuerda realizar tu pago a tiempo.`,
+            tag: `payment-due-${p.id}`,
+            data: { paymentId: p.id }
+          });
+          
+          markPaymentAsNotifiedToday(p.id);
+        }
+      }
+    });
+  };
+
+  const requestPushPermission = async () => {
+    const perm = await requestNotificationPermission();
+    setNotificationPermission(perm);
+    if (perm === 'granted') {
+      sendBrowserNotification({
+        title: '✅ Notificaciones de GastFin Activadas',
+        body: 'Te avisaremos oportunamente sobre tus gastos y pagos programados antes de su vencimiento.',
+        tag: 'gastfin-activated'
+      });
+      checkAndTriggerPaymentNotifications();
+    }
+    return perm;
+  };
+
+  const testPushNotification = (payment?: ScheduledPayment) => {
+    const p = payment || scheduledPayments[0];
+    const formattedAmt = p ? formatMoney(p.amount) : formatMoney(50000);
+    const title = p ? p.title : 'Cuenta de Servicios';
+    sendBrowserNotification({
+      title: `🔔 Prueba de Recordatorio: ${title}`,
+      body: `¡Vence en ${p?.notifyDaysBefore ?? 5} días! Monto: ${formattedAmt}. Esta es una alerta de prueba de GastFin.`,
+      tag: `test-${Date.now()}`
+    });
+  };
+
+  const addScheduledPayment = (payment: Omit<ScheduledPayment, 'id' | 'createdAt'>) => {
+    const newPayment: ScheduledPayment = {
+      ...payment,
+      id: `sp-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setScheduledPayments(prev => [newPayment, ...prev]);
+    triggerCelebration();
+  };
+
+  const updateScheduledPayment = (id: string, payment: Partial<Omit<ScheduledPayment, 'id' | 'createdAt'>>) => {
+    setScheduledPayments(prev => prev.map(p => p.id === id ? { ...p, ...payment } : p));
+  };
+
+  const deleteScheduledPayment = (id: string) => {
+    setScheduledPayments(prev => prev.filter(p => p.id !== id));
+  };
+
+  const markScheduledPaymentAsPaid = (id: string, createExpenseTx: boolean = true) => {
+    const found = scheduledPayments.find(p => p.id === id);
+    if (!found) return;
+
+    if (createExpenseTx) {
+      addTransaction({
+        type: 'expense',
+        amount: found.amount,
+        category: found.category,
+        description: `Pago programado: ${found.title}`,
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'transfer',
+        status: 'completed',
+        isRecurring: found.recurrence !== 'once',
+        tags: ['pago-programado'],
+        notes: found.notes,
+      });
+    }
+
+    setScheduledPayments(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      if (p.recurrence === 'once') {
+        return { ...p, status: 'paid', lastPaidDate: new Date().toISOString().split('T')[0] };
+      }
+      // If recurring (monthly/biweekly/weekly/yearly), advance the dueDate to the next cycle
+      const [y, m, d] = p.dueDate.split('-').map(Number);
+      const nextDate = new Date(y, m - 1, d);
+      if (p.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+      else if (p.recurrence === 'biweekly') nextDate.setDate(nextDate.getDate() + 14);
+      else if (p.recurrence === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+      else if (p.recurrence === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+
+      const nextDueStr = nextDate.toISOString().split('T')[0];
+      return {
+        ...p,
+        dueDate: nextDueStr,
+        status: 'pending',
+        lastPaidDate: new Date().toISOString().split('T')[0]
+      };
+    }));
+
+    triggerCelebration();
+  };
+
   const clearAllDataToZero = () => {
     setTransactions([]);
     setDebts([]);
@@ -979,6 +1201,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addBudget,
         updateBudget,
         deleteBudget,
+        scheduledPayments,
+        addScheduledPayment,
+        updateScheduledPayment,
+        deleteScheduledPayment,
+        markScheduledPaymentAsPaid,
+        notificationPermission,
+        requestPushPermission,
+        testPushNotification,
         isReceiptScannerOpen,
         setIsReceiptScannerOpen,
         savingsTips,
