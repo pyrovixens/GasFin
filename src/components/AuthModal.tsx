@@ -34,30 +34,57 @@ export const AuthModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
   if (!isAuthModalOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutSeconds > 0) {
+      setErrorMsg(`Demasiados intentos fallidos. Espera ${lockoutSeconds} segundos.`);
+      return;
+    }
+
     setErrorMsg(null);
     setSuccessMsg(null);
     setIsLoading(true);
 
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanPassword = password;
+
     try {
       if (mode === 'login') {
-        const res = await loginWithSupabase(email.trim(), password);
+        const res = await loginWithSupabase(cleanEmail, cleanPassword);
         if (!res.success) {
+          const newFailed = failedAttempts + 1;
+          setFailedAttempts(newFailed);
+          if (newFailed >= 4) {
+            setLockoutSeconds(15);
+            const interval = setInterval(() => {
+              setLockoutSeconds(prev => {
+                if (prev <= 1) {
+                  clearInterval(interval);
+                  setFailedAttempts(0);
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+
           if (res.error?.includes('rate limit')) {
             setErrorMsg('Límite de solicitudes alcanzado. Por favor espera un momento e intenta nuevamente.');
           } else {
-            setErrorMsg(res.error || 'Error al iniciar sesión. Verifica tu correo y contraseña.');
+            setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.');
           }
         } else {
+          setFailedAttempts(0);
           setSuccessMsg('¡Sesión iniciada con éxito! Sincronizando tus datos...');
           setTimeout(() => setIsAuthModalOpen(false), 1200);
         }
       } else {
-        const res = await signupWithSupabase(email.trim(), password, displayName.trim());
+        const res = await signupWithSupabase(cleanEmail, cleanPassword, displayName.trim());
         if (!res.success) {
           if (res.error?.includes('rate limit')) {
             setErrorMsg('⚠️ Límite temporal alcanzado. Por favor intenta en unos minutos.');

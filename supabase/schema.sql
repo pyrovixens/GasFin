@@ -75,21 +75,31 @@ alter table public.debts enable row level security;
 alter table public.goals enable row level security;
 alter table public.budgets enable row level security;
 
--- POLÍTICAS DE ACCESO AISLADO
+-- POLÍTICAS DE ACCESO AISLADO (LECTURA, MODIFICACIÓN E INSERCIÓN BLINDADAS)
 drop policy if exists "Users can only access own profile" on public.profiles;
-create policy "Users can only access own profile" on public.profiles for all using (auth.uid() = id);
+create policy "Users can only access own profile" on public.profiles 
+  for all using (auth.uid() = id) 
+  with check (auth.uid() = id);
 
 drop policy if exists "Users can only access own transactions" on public.transactions;
-create policy "Users can only access own transactions" on public.transactions for all using (auth.uid() = user_id);
+create policy "Users can only access own transactions" on public.transactions 
+  for all using (auth.uid() = user_id) 
+  with check (auth.uid() = user_id);
 
 drop policy if exists "Users can only access own debts" on public.debts;
-create policy "Users can only access own debts" on public.debts for all using (auth.uid() = user_id);
+create policy "Users can only access own debts" on public.debts 
+  for all using (auth.uid() = user_id) 
+  with check (auth.uid() = user_id);
 
 drop policy if exists "Users can only access own goals" on public.goals;
-create policy "Users can only access own goals" on public.goals for all using (auth.uid() = user_id);
+create policy "Users can only access own goals" on public.goals 
+  for all using (auth.uid() = user_id) 
+  with check (auth.uid() = user_id);
 
 drop policy if exists "Users can only access own budgets" on public.budgets;
-create policy "Users can only access own budgets" on public.budgets for all using (auth.uid() = user_id);
+create policy "Users can only access own budgets" on public.budgets 
+  for all using (auth.uid() = user_id) 
+  with check (auth.uid() = user_id);
 
 -- =======================================================
 -- TRIGGER AUTOMÁTICO PARA CREAR PERFIL AL REGISTRARSE
@@ -101,7 +111,7 @@ begin
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'display_name', 'Usuario'));
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

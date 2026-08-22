@@ -814,11 +814,22 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lines.push(`Cuotas Mínimas Mensuales;${metrics.monthlyDebtObligation}`);
     lines.push(``);
 
+    // CSV Formula Injection & Quotes Sanitizer
+    const sanitizeCsvField = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '""';
+      let str = String(val).replace(/"/g, '""');
+      // Escape leading formula characters (=, +, -, @, tab, CR)
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+      }
+      return `"${str}"`;
+    };
+
     // Transactions Table
     lines.push(`LIBRO DE INGRESOS Y GASTOS`);
     lines.push(`ID;Tipo;Fecha;Hora;Concepto;Categoría;Monto;Método de Pago;Estado`);
     transactions.forEach(t => {
-      lines.push(`${t.id};${t.type === 'income' ? 'Ingreso (+)' : 'Gasto (-)'};${t.date};${t.time || '12:00'};"${t.description.replace(/"/g, '""')}";${t.category};${t.amount};${t.paymentMethod};${t.status}`);
+      lines.push(`${t.id};${t.type === 'income' ? 'Ingreso (+)' : 'Gasto (-)'};${t.date};${t.time || '12:00'};${sanitizeCsvField(t.description)};${sanitizeCsvField(t.category)};${t.amount};${t.paymentMethod};${t.status}`);
     });
     lines.push(``);
 
@@ -826,7 +837,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lines.push(`REGISTRO DE DEUDAS`);
     lines.push(`ID;Nombre / Crédito;Acreedor;Saldo Pendiente;Tasa APR (%);Cuota Mínima;Fecha Límite`);
     debts.forEach(d => {
-      lines.push(`${d.id};"${d.name.replace(/"/g, '""')}";"${d.creditor.replace(/"/g, '""')}";${d.remainingAmount};${d.interestRate}%;${d.minimumPayment};${d.dueDate}`);
+      lines.push(`${d.id};${sanitizeCsvField(d.name)};${sanitizeCsvField(d.creditor)};${d.remainingAmount};${d.interestRate}%;${d.minimumPayment};${d.dueDate}`);
     });
     lines.push(``);
 
@@ -835,7 +846,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lines.push(`ID;Meta;Monto Objetivo;Ahorro Actual;% Progreso;Fecha Límite`);
     goals.forEach(g => {
       const pct = g.targetAmount > 0 ? ((g.currentAmount / g.targetAmount) * 100).toFixed(0) : 0;
-      lines.push(`${g.id};"${g.title.replace(/"/g, '""')}";${g.targetAmount};${g.currentAmount};${pct}%;${g.targetDate}`);
+      lines.push(`${g.id};${sanitizeCsvField(g.title)};${g.targetAmount};${g.currentAmount};${pct}%;${g.targetDate}`);
     });
 
     const csvContent = "\uFEFF" + lines.join("\r\n");
@@ -853,13 +864,52 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const importDataFromJSON = (jsonData: string): boolean => {
     try {
+      if (jsonData.length > 5 * 1024 * 1024) {
+        console.error("Payload JSON excede el límite de 5MB");
+        return false;
+      }
       const parsed = JSON.parse(jsonData);
-      if (parsed.userName) setUserName(parsed.userName);
-      if (Array.isArray(parsed.transactions)) setTransactions(parsed.transactions);
-      if (Array.isArray(parsed.debts)) setDebts(parsed.debts);
-      if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
-      if (Array.isArray(parsed.savingsTips)) setSavingsTips(parsed.savingsTips);
-      if (parsed.currency) setCurrency(parsed.currency);
+      if (typeof parsed !== 'object' || parsed === null) return false;
+
+      if (typeof parsed.userName === 'string') {
+        setUserName(parsed.userName.slice(0, 50).trim());
+      }
+      if (Array.isArray(parsed.transactions)) {
+        const validTx = parsed.transactions.slice(0, 5000).filter((t: any) => 
+          t && typeof t.id === 'string' && (t.type === 'income' || t.type === 'expense') && !isNaN(Number(t.amount))
+        ).map((t: any) => ({
+          ...t,
+          amount: Math.abs(Number(t.amount)),
+          description: String(t.description || '').slice(0, 200),
+          category: String(t.category || 'Varios').slice(0, 100),
+        }));
+        if (validTx.length > 0) setTransactions(validTx);
+      }
+      if (Array.isArray(parsed.debts)) {
+        const validDebts = parsed.debts.slice(0, 500).filter((d: any) => 
+          d && typeof d.id === 'string' && !isNaN(Number(d.totalAmount))
+        ).map((d: any) => ({
+          ...d,
+          totalAmount: Math.abs(Number(d.totalAmount)),
+          remainingAmount: Math.abs(Number(d.remainingAmount || d.totalAmount)),
+          name: String(d.name || '').slice(0, 100),
+        }));
+        if (validDebts.length > 0) setDebts(validDebts);
+      }
+      if (Array.isArray(parsed.goals)) {
+        const validGoals = parsed.goals.slice(0, 500).filter((g: any) => 
+          g && typeof g.id === 'string' && !isNaN(Number(g.targetAmount))
+        ).map((g: any) => ({
+          ...g,
+          targetAmount: Math.abs(Number(g.targetAmount)),
+          currentAmount: Math.abs(Number(g.currentAmount || 0)),
+          title: String(g.title || '').slice(0, 100),
+        }));
+        if (validGoals.length > 0) setGoals(validGoals);
+      }
+      if (parsed.currency && typeof parsed.currency.code === 'string') {
+        setCurrency(parsed.currency.code);
+      }
       triggerCelebration();
       return true;
     } catch (e) {
