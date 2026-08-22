@@ -23,6 +23,7 @@ export const BudgetsView: React.FC = () => {
     addBudget, 
     updateBudget, 
     deleteBudget, 
+    clearAllBudgets,
     transactions, 
     formatMoney, 
     formatInputLive,
@@ -161,13 +162,30 @@ export const BudgetsView: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Nuevo Tope de Gasto</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {budgets.length > 0 && (
+              <button
+                onClick={() => {
+                  if (confirm("¿Deseas vaciar todos los topes fijados y dejarlos en $0?")) {
+                    clearAllBudgets();
+                  }
+                }}
+                className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5"
+                title="Vaciar todos los topes fijados"
+              >
+                <Trash2 size={15} />
+                <span>Vaciar Topes a $0</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleOpenAdd}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Nuevo Tope de Gasto</span>
+            </button>
+          </div>
         </div>
 
         {/* 2. THREE CLEAN SUMMARY CARDS */}

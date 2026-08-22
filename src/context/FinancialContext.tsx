@@ -114,6 +114,7 @@ interface FinancialContextType {
   addBudget: (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => void;
   updateBudget: (id: string, updates: Partial<Omit<CategoryBudget, 'id' | 'createdAt'>> | number) => void;
   deleteBudget: (id: string) => void;
+  clearAllBudgets: () => void;
 
   // Savings Tips
   savingsTips: SavingsTip[];
@@ -230,16 +231,19 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
     try {
+      // Purge all legacy stored budgets to start clean from 0
+      localStorage.removeItem('gastfin_budgets_v7');
       localStorage.removeItem('gastfin_budgets_v6');
       localStorage.removeItem('gastfin_custom_budget_base');
+      localStorage.removeItem('gastfin_custom_budget_base_v7');
     } catch {}
 
-    const saved = localStorage.getItem('gastfin_budgets_v7');
+    const saved = localStorage.getItem('gastfin_budgets_v8');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.filter((b: any) => b && !['b-1', 'b-2', 'b-3', 'b-4', 'b-5'].includes(b.id));
+          return parsed;
         }
       } catch {
         return [];
@@ -424,6 +428,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (supabaseUser) deleteBudgetFromSupabase(id, supabaseUser.id);
   };
 
+  const clearAllBudgets = () => {
+    setBudgets([]);
+    localStorage.removeItem('gastfin_budgets_v8');
+    localStorage.removeItem('gastfin_budgets_v7');
+    localStorage.removeItem('gastfin_budgets_v6');
+    localStorage.removeItem('gastfin_custom_budget_base');
+    localStorage.removeItem('gastfin_custom_budget_base_v7');
+    triggerCelebration();
+  };
+
   // Modals state
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransactionMinimized, setIsTransactionMinimized] = useState(false);
@@ -455,7 +469,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [savingsTips]);
 
   useEffect(() => {
-    localStorage.setItem('gastfin_budgets_v7', JSON.stringify(budgets));
+    localStorage.setItem('gastfin_budgets_v8', JSON.stringify(budgets));
   }, [budgets]);
 
   useEffect(() => {
@@ -1187,6 +1201,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addBudget,
         updateBudget,
         deleteBudget,
+        clearAllBudgets,
         scheduledPayments,
         addScheduledPayment,
         updateScheduledPayment,
