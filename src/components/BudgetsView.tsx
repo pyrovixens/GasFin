@@ -15,9 +15,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ShieldAlert,
-  Sparkles,
-  LayoutGrid,
-  Check
+  Sparkles
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
@@ -52,17 +50,20 @@ export const BudgetsView: React.FC = () => {
   const [editingBudget, setEditingBudget] = useState<CategoryBudget | null>(null);
   
   // Floating Modal State for Delete Confirmations
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; category: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id?: string; category: string } | null>(null);
   const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
+
+  // Dismissed Categories (categories without budget that user explicitly deleted from view)
+  const [dismissedCategories, setDismissedCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('gastfin_dismissed_budget_cats_v1');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Form State
   const [categoryInput, setCategoryInput] = useState(DEFAULT_EXPENSE_CATEGORIES[0] || 'Alimentación & Supermercado');
   const [limitInput, setLimitInput] = useState('');
   const [warningThreshold, setWarningThreshold] = useState<number>(80);
   const [notesInput, setNotesInput] = useState('');
-
-  // Toggle to view only active categories vs all available categories
-  const [showAllCategories, setShowAllCategories] = useState<boolean>(true);
 
   // Effective Base Money: Real total income or user custom base
   const effectiveBaseMoney = useMemo(() => {
@@ -78,7 +79,7 @@ export const BudgetsView: React.FC = () => {
     transactions
       .filter(t => t.type === 'expense')
       .forEach(t => {
-        const cat = t.category || 'Otros Egresos';
+        const cat = t.category || 'Otros Gastos';
         if (!map[cat]) {
           map[cat] = { total: 0, count: 0 };
         }
@@ -88,17 +89,18 @@ export const BudgetsView: React.FC = () => {
     return map;
   }, [transactions]);
 
-  // 2. Build Unified Category Items: combines categories with real expenses, topes, and available standard categories with 0
-  const unifiedCategories = useMemo(() => {
+  // 2. Build Category Items: ONLY show categories with real expenses or explicit budgets
+  const activeCategories = useMemo(() => {
     const categoriesSet = new Set<string>();
 
-    // If showAllCategories is true, include all default categories starting at 0
-    if (showAllCategories) {
-      DEFAULT_EXPENSE_CATEGORIES.forEach(cat => categoriesSet.add(cat));
-    }
+    // Include categories with real expenses (unless dismissed)
+    Object.keys(spendingByCategory).forEach(cat => {
+      if (!dismissedCategories.includes(cat) && spendingByCategory[cat].total > 0) {
+        categoriesSet.add(cat);
+      }
+    });
 
-    // Always include categories with actual expenses or saved budgets
-    Object.keys(spendingByCategory).forEach(cat => categoriesSet.add(cat));
+    // Include categories that have explicit budgets
     budgets.forEach(b => categoriesSet.add(b.category));
 
     const budgetMap = new Map<string, CategoryBudget>();
@@ -138,7 +140,7 @@ export const BudgetsView: React.FC = () => {
       if (!a.hasBudget && b.hasBudget) return 1;
       return b.spent - a.spent;
     });
-  }, [spendingByCategory, budgets, showAllCategories]);
+  }, [spendingByCategory, budgets, dismissedCategories]);
 
   // Totals calculations
   const totals = useMemo(() => {
@@ -197,6 +199,13 @@ export const BudgetsView: React.FC = () => {
     const rawLimit = parseRawFromDisplay(limitInput);
     if (!categoryInput.trim() || rawLimit <= 0) return;
 
+    // Un-dismiss if was dismissed
+    if (dismissedCategories.includes(categoryInput.trim())) {
+      const nextDismissed = dismissedCategories.filter(c => c !== categoryInput.trim());
+      setDismissedCategories(nextDismissed);
+      localStorage.setItem('gastfin_dismissed_budget_cats_v1', JSON.stringify(nextDismissed));
+    }
+
     if (editingBudget) {
       updateBudget(editingBudget.id, {
         category: categoryInput.trim(),
@@ -217,11 +226,27 @@ export const BudgetsView: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  // Complete Deletion of an Item / Window
   const handleConfirmDelete = () => {
     if (deleteTarget) {
-      deleteBudget(deleteTarget.id);
+      if (deleteTarget.id) {
+        deleteBudget(deleteTarget.id);
+      }
+      // Also add to dismissed to make sure the window disappears completely from screen
+      const nextDismissed = Array.from(new Set([...dismissedCategories, deleteTarget.category]));
+      setDismissedCategories(nextDismissed);
+      localStorage.setItem('gastfin_dismissed_budget_cats_v1', JSON.stringify(nextDismissed));
       setDeleteTarget(null);
     }
+  };
+
+  const handleConfirmClearAll = () => {
+    clearAllBudgets();
+    // Dismiss all current spending categories as well
+    const allCats = Object.keys(spendingByCategory);
+    setDismissedCategories(allCats);
+    localStorage.setItem('gastfin_dismissed_budget_cats_v1', JSON.stringify(allCats));
+    setIsConfirmingClearAll(false);
   };
 
   return (
@@ -235,28 +260,30 @@ export const BudgetsView: React.FC = () => {
               <BarChart3 size={26} />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white">Límites & Topes de Gasto</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">Límites & Control de Egresos</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Todas las categorías están listas en $0 para que asignes tus topes y controles tus egresos reales.
+                Fija topes de gasto en las categorías que quieras controlar. Puedes eliminar cualquier ventana que no desees ver.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {budgets.length > 0 && (
+            {activeCategories.length > 0 && (
               <button
+                type="button"
                 onClick={() => setIsConfirmingClearAll(true)}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5"
-                title="Vaciar todos los topes fijados"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Vaciar todos los topes y ventanas"
               >
                 <Trash2 size={15} />
-                <span>Vaciar Topes a $0</span>
+                <span>Vaciar Todo a $0</span>
               </button>
             )}
 
             <button
+              type="button"
               onClick={() => handleOpenAdd()}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={16} strokeWidth={2.5} />
               <span>Nuevo Tope de Gasto</span>
@@ -275,11 +302,12 @@ export const BudgetsView: React.FC = () => {
                 Dinero Base / Ingresos
               </span>
               <button
+                type="button"
                 onClick={() => {
                   setTempBaseInput(formatInputLive(effectiveBaseMoney));
                   setIsEditingBase(true);
                 }}
-                className="text-[10px] text-emerald-400 hover:underline font-bold"
+                className="text-[10px] text-emerald-400 hover:underline font-bold cursor-pointer"
               >
                 Ajustar
               </button>
@@ -330,38 +358,28 @@ export const BudgetsView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. CATEGORIES GRID WITH FLOATING ACTIONS */}
-      <div className="space-y-4">
-        
-        {/* Toggle Bar */}
-        <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-xs">
-          <div className="flex items-center gap-2">
+      {/* 3. ACTIVE CATEGORIES ONLY (NO EXTRA 20 DEFAULT CARDS) */}
+      {activeCategories.length === 0 ? (
+        <div className="p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+          <BarChart3 size={36} className="mx-auto text-slate-600" />
+          <h3 className="text-base font-bold text-white">No tienes categorías ni topes en pantalla</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            La vista está completamente limpia en $0. Haz clic en <strong>+ Nuevo Tope de Gasto</strong> para elegir únicamente la categoría que quieras fijar.
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-2">
             <button
-              onClick={() => setShowAllCategories(true)}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                showAllCategories ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              type="button"
+              onClick={() => handleOpenAdd()}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all inline-flex items-center gap-1.5 cursor-pointer"
             >
-              Todas las Categorías ({DEFAULT_EXPENSE_CATEGORIES.length})
-            </button>
-            <button
-              onClick={() => setShowAllCategories(false)}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                !showAllCategories ? 'bg-indigo-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Solo con Topes o Gastos ({budgets.length + Object.keys(spendingByCategory).filter(c => !budgets.some(b => b.category === c)).length})
+              <Plus size={15} strokeWidth={2.5} />
+              <span>+ Nuevo Tope de Gasto</span>
             </button>
           </div>
-
-          <span className="text-slate-400 hidden sm:inline">
-            Haz clic en <strong>Fijar Tope</strong> o en el lápiz para ingresar tu monto
-          </span>
         </div>
-
-        {/* Grid of Categories */}
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {unifiedCategories.map(item => {
+          {activeCategories.map(item => {
             const hasBudget = item.hasBudget;
 
             return (
@@ -374,7 +392,7 @@ export const BudgetsView: React.FC = () => {
                     ? 'bg-amber-950/20 border-amber-500/50 shadow-glow-amber'
                     : hasBudget
                     ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
-                    : 'bg-slate-900/40 border-slate-800/60'
+                    : 'bg-slate-900/50 border-slate-800/80'
                 }`}
               >
                 <div>
@@ -384,36 +402,56 @@ export const BudgetsView: React.FC = () => {
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#10B981' }}
                       />
-                      <h4 className="text-sm font-bold text-white truncate max-w-[180px]">{item.category}</h4>
+                      <div>
+                        <h4 className="text-sm font-bold text-white truncate max-w-[180px]">{item.category}</h4>
+                        {item.txCount > 0 && (
+                          <span className="text-[10px] text-slate-400">
+                            {item.txCount} {item.txCount === 1 ? 'movimiento' : 'movimientos'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-1">
                       {hasBudget && item.budget ? (
                         <>
                           <button
+                            type="button"
                             onClick={() => handleOpenEdit(item.budget!)}
-                            className="p-1 text-slate-400 hover:text-white"
+                            className="p-1 text-slate-400 hover:text-white cursor-pointer"
                             title="Editar tope"
                           >
                             <Edit3 size={14} />
                           </button>
                           <button
+                            type="button"
                             onClick={() => setDeleteTarget({ id: item.budget!.id, category: item.category })}
-                            className="p-1 text-slate-400 hover:text-rose-400"
-                            title="Eliminar tope"
+                            className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Eliminar esta ventana"
                           >
                             <Trash2 size={14} />
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => handleOpenAdd(item.category, item.spent > 0 ? item.spent : 50000)}
-                          className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-colors flex items-center gap-1"
-                          title="Fijar tope a esta categoría"
-                        >
-                          <Plus size={12} />
-                          <span>Fijar Tope</span>
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAdd(item.category, item.spent > 0 ? item.spent : 50000)}
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Fijar tope a esta categoría"
+                          >
+                            <Plus size={12} />
+                            <span>Fijar Tope</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget({ category: item.category })}
+                            className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
+                            title="Quitar esta ventana de la pantalla"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -427,7 +465,7 @@ export const BudgetsView: React.FC = () => {
                       Tope: {hasBudget ? (
                         <strong className="text-emerald-400 font-mono">{formatMoney(item.limit)}</strong>
                       ) : (
-                        <span className="text-slate-500 italic text-[11px] font-mono">$ 0 (Sin fijar)</span>
+                        <span className="text-slate-500 italic text-[11px] font-mono">Sin fijar ($ 0)</span>
                       )}
                     </span>
                   </div>
@@ -459,13 +497,14 @@ export const BudgetsView: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <div className="p-2 rounded-xl bg-slate-800/30 border border-slate-700/30 flex items-center justify-between mt-2">
-                      <span className="text-[10px] text-slate-400">Gasto actual en $0.</span>
+                    <div className="p-2 rounded-xl bg-slate-800/40 border border-slate-700/40 flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-slate-300">Tienes gastos pero no has fijado tope.</span>
                       <button
-                        onClick={() => handleOpenAdd(item.category, 50000)}
-                        className="text-[10px] text-emerald-400 hover:underline font-bold whitespace-nowrap ml-2"
+                        type="button"
+                        onClick={() => handleOpenAdd(item.category, item.spent > 0 ? item.spent : 50000)}
+                        className="text-[11px] text-emerald-400 hover:underline font-bold whitespace-nowrap ml-2 cursor-pointer"
                       >
-                        + Asignar Tope
+                        + Asignar
                       </button>
                     </div>
                   )}
@@ -480,8 +519,7 @@ export const BudgetsView: React.FC = () => {
             );
           })}
         </div>
-
-      </div>
+      )}
 
       {/* 4. FLOATING MODAL: ADD / EDIT CATEGORY BUDGET */}
       {isModalOpen && (
@@ -504,8 +542,9 @@ export const BudgetsView: React.FC = () => {
               </div>
 
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800"
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -582,13 +621,13 @@ export const BudgetsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all cursor-pointer"
                 >
                   {editingBudget ? 'Guardar Cambios' : 'Guardar Tope'}
                 </button>
@@ -600,7 +639,7 @@ export const BudgetsView: React.FC = () => {
         </div>
       )}
 
-      {/* 5. FLOATING CONFIRMATION MODAL: DELETE INDIVIDUAL TOPE */}
+      {/* 5. FLOATING CONFIRMATION MODAL: DELETE / REMOVE WINDOW */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
@@ -609,9 +648,9 @@ export const BudgetsView: React.FC = () => {
                 <Trash2 size={22} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">¿Eliminar Tope?</h3>
+                <h3 className="text-base font-bold text-white">¿Borrar esta Categoría?</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Se eliminará el límite de gasto fijado para <strong className="text-white">"{deleteTarget.category}"</strong>.
+                  Se quitará la ventana y tope de <strong className="text-white">"{deleteTarget.category}"</strong> de la pantalla.
                 </p>
               </div>
             </div>
@@ -620,16 +659,16 @@ export const BudgetsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose cursor-pointer"
               >
-                Eliminar Tope
+                Borrar Ventana
               </button>
             </div>
           </div>
@@ -645,9 +684,9 @@ export const BudgetsView: React.FC = () => {
                 <AlertTriangle size={22} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">¿Vaciar todos los Topes?</h3>
+                <h3 className="text-base font-bold text-white">¿Vaciar todas las Ventanas?</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Todos los límites de gasto se resetearán a <strong className="text-white">$ 0</strong> para que ingreses tus datos desde cero.
+                  Se limpiarán todas las tarjetas y topes de la pantalla para comenzar desde cero.
                 </p>
               </div>
             </div>
@@ -656,19 +695,16 @@ export const BudgetsView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsConfirmingClearAll(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  clearAllBudgets();
-                  setIsConfirmingClearAll(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose"
+                onClick={handleConfirmClearAll}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose cursor-pointer"
               >
-                Vaciar a $0
+                Vaciar Todo
               </button>
             </div>
           </div>
@@ -681,7 +717,7 @@ export const BudgetsView: React.FC = () => {
           <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-white">Ajustar Dinero Base a Distribuir</h3>
-              <button onClick={() => setIsEditingBase(false)} className="text-slate-400 hover:text-white">
+              <button type="button" onClick={() => setIsEditingBase(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X size={16} />
               </button>
             </div>
@@ -705,7 +741,7 @@ export const BudgetsView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResetBaseToIncome}
-                className="text-[11px] text-slate-400 hover:text-rose-400"
+                className="text-[11px] text-slate-400 hover:text-rose-400 cursor-pointer"
               >
                 Usar Ingresos Reales
               </button>
@@ -713,14 +749,14 @@ export const BudgetsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsEditingBase(false)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveBaseMoney}
-                  className="px-4 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
+                  className="px-4 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs cursor-pointer"
                 >
                   Guardar
                 </button>
