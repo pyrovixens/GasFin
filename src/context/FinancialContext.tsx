@@ -424,7 +424,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const deleteBudget = (id: string) => {
-    setBudgets(prev => prev.filter(b => b.id !== id));
+    setBudgets(prev => {
+      const updated = prev.filter(b => b.id !== id && b.category !== id);
+      try {
+        localStorage.setItem('gastfin_budgets_v8', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     if (supabaseUser) deleteBudgetFromSupabase(id, supabaseUser.id);
   };
 

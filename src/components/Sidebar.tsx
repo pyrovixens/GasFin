@@ -199,25 +199,26 @@ export const Sidebar: React.FC = () => {
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleSelectView(item.id)}
                 title={isSidebarCollapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-medium text-sm transition-all duration-200 group relative ${
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-sm transition-all duration-150 group relative cursor-pointer border select-none ${
                   isActive
-                    ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30 shadow-sm font-bold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/10 text-emerald-400 border-emerald-500/40 shadow-sm font-bold ring-1 ring-emerald-500/30'
+                    : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800/90 hover:border-slate-700/70 active:scale-[0.98]'
                 } ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center px-0' : ''}`}
               >
                 <Icon 
                   className={`w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                    isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-200'
+                    isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'
                   }`} 
                 />
                 
                 {(!isSidebarCollapsed || window.innerWidth < 768) && (
                   <div className="flex items-center justify-between flex-1 min-w-0">
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate group-hover:text-white transition-colors">{item.label}</span>
                     {item.badge && (
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.badgeColor}`}>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${item.badgeColor}`}>
                         {item.badge}
                       </span>
                     )}
@@ -226,7 +227,7 @@ export const Sidebar: React.FC = () => {
 
                 {/* Active Indicator Bar */}
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-r-full" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-emerald-400 rounded-r-full shadow-glow-emerald" />
                 )}
               </button>
             );
