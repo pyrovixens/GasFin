@@ -17,6 +17,8 @@ import {
   BarChart3,
   Calendar,
   Zap,
+  Cloud,
+  Lock,
   FileText
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
@@ -34,6 +36,8 @@ export const Sidebar: React.FC = () => {
     currentCurrency,
     setCurrency,
     userName,
+    supabaseUser,
+    setIsAuthModalOpen,
     setIsCurrencySetupModalOpen
   } = useFinancial();
 
@@ -259,6 +263,28 @@ export const Sidebar: React.FC = () => {
                 </select>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Supabase Cloud Account Button */}
+        {(!isSidebarCollapsed || window.innerWidth < 768) && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className={`w-full p-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-between shadow-sm active:scale-95 ${
+                supabaseUser
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40'
+                  : 'bg-indigo-600/20 hover:bg-indigo-600/30 border-indigo-500/40 text-indigo-200'
+              }`}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Cloud size={16} className={supabaseUser ? 'text-emerald-400' : 'text-indigo-400'} />
+                <span className="truncate">{supabaseUser ? (supabaseUser.email || 'Nube Activa') : '🔐 Iniciar Sesión / Nube'}</span>
+              </div>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-300">
+                {supabaseUser ? '🟢' : 'Nube'}
+              </span>
+            </button>
           </div>
         )}
 

@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Coins, Sparkles, User, ArrowRight } from 'lucide-react';
+import { Coins, Sparkles, User, ArrowRight, Cloud, Lock } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../data/initialData';
 
 export const CurrencySetupModal: React.FC = () => {
   const { 
     isCurrencySetupModalOpen, 
+    setIsCurrencySetupModalOpen,
     currentCurrency, 
     userName,
+    supabaseUser,
+    setIsAuthModalOpen,
     lockAndSetCurrencyAndName 
   } = useFinancial();
 
@@ -23,6 +26,11 @@ export const CurrencySetupModal: React.FC = () => {
     lockAndSetCurrencyAndName(selectedCurrencyCode, finalName);
   };
 
+  const handleOpenAuth = () => {
+    setIsCurrencySetupModalOpen(false);
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-emerald-950/50 my-auto">
@@ -35,16 +43,48 @@ export const CurrencySetupModal: React.FC = () => {
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            ¿Cómo quieres que te llamemos?
+            Configuración de Acceso
           </h2>
 
           <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-            Ingresa tu alias o nombre para personalizar tus dashboards, reportes y métricas financieras.
+            Puedes sincronizar tus datos en la nube con Supabase o comenzar de inmediato en modo local.
           </p>
         </div>
 
+        {/* Cloud Login / Register Banner */}
+        {!supabaseUser && (
+          <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-indigo-950/50 via-slate-800/80 to-emerald-950/50 border border-indigo-500/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cloud size={18} className="text-indigo-400" />
+                <span className="font-extrabold text-white text-xs">¿Deseas acceder desde cualquier dispositivo?</span>
+              </div>
+              <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Recomendado
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300">
+              Inicia sesión o crea tu cuenta gratuita para guardar tus finanzas en la base de datos Supabase en tiempo real.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenAuth}
+              className="w-full mt-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-glow-indigo transition-all flex items-center justify-center gap-1.5 active:scale-95"
+            >
+              <Lock size={14} />
+              <span>🔐 Iniciar Sesión o Registrarse en la Nube</span>
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
+          <div className="flex items-center gap-2">
+            <div className="h-px bg-slate-800 flex-1" />
+            <span className="text-[11px] font-bold text-slate-400 uppercase">o continúa en modo local</span>
+            <div className="h-px bg-slate-800 flex-1" />
+          </div>
+
           {/* Alias / Name Input Box */}
           <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/90 space-y-2">
             <label className="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
@@ -54,7 +94,6 @@ export const CurrencySetupModal: React.FC = () => {
             <input
               type="text"
               required
-              autoFocus
               placeholder="Ingresa tu alias o nombre aquí..."
               value={inputName}
               onChange={(e) => setInputName(e.target.value)}
@@ -72,7 +111,7 @@ export const CurrencySetupModal: React.FC = () => {
               <span className="text-[11px] text-slate-400 font-semibold">Formato con puntos</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
               {SUPPORTED_CURRENCIES.map((curr) => {
                 const isSelected = selectedCurrencyCode === curr.code;
                 return (
@@ -103,7 +142,7 @@ export const CurrencySetupModal: React.FC = () => {
           {/* Submit Action Button */}
           <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <span className="text-[11px] text-slate-400 text-center sm:text-left">
-              🔒 Tus datos se guardan de forma privada en tu navegador.
+              🔒 Tus datos se guardan de forma privada.
             </span>
 
             <button
