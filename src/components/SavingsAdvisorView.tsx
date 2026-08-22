@@ -144,12 +144,12 @@ export const SavingsAdvisorView: React.FC = () => {
     // Proposal 1: Highest spending category optimization
     if (realExpensesAudit.highestCategory && realExpensesAudit.highestCategory.amount > 0) {
       const topCat = realExpensesAudit.highestCategory;
-      const suggestedCut = Math.round(topCat.amount * 0.12); // 12% optimization
+      const suggestedCut = Math.round(topCat.amount * 0.12);
       proposals.push({
         id: 'top-cat-proposal',
-        title: `Optimización en ${topCat.name} (Gasto Mayor)`,
+        title: `Ojo con tu mayor gasto: ${topCat.name}`,
         category: topCat.name,
-        description: `Representa el ${topCat.pctOfTotal.toFixed(0)}% de todos tus egresos (${formatMoney(topCat.amount)}). Reducir un 12% mediante cotizaciones o compras mayoristas liberará capital inmediatamente.`,
+        description: `Esta categoría se lleva el ${topCat.pctOfTotal.toFixed(0)}% de todo lo que gastas (${formatMoney(topCat.amount)}). Si logras recortar un poco cotizando mejor o comprando en cantidad, puedes ahorrarte ${formatMoney(suggestedCut)} al mes.`,
         impactMonthly: suggestedCut,
         impactAnnual: suggestedCut * 12,
         urgency: topCat.pctOfTotal > 35 ? 'alta' : 'media',
@@ -159,12 +159,12 @@ export const SavingsAdvisorView: React.FC = () => {
 
     // Proposal 2: Recurring payments / Subscriptions leak
     if (realExpensesAudit.recurringAmount > 0) {
-      const recPotential = Math.round(realExpensesAudit.recurringAmount * 0.30); // 30% cut on unused services
+      const recPotential = Math.round(realExpensesAudit.recurringAmount * 0.30);
       proposals.push({
         id: 'recurring-leak-proposal',
-        title: `Auditoría de Suscripciones y Pagos Fijos`,
+        title: `Revisa tus cuentas y suscripciones fijas`,
         category: 'Suscripciones & Servicios',
-        description: `Tienes ${formatMoney(realExpensesAudit.recurringAmount)}/mes en cobros recurrentes (${formatMoney(realExpensesAudit.recurringAmount * 12)} al año). Cancelar servicios poco usados o migrar a planes familiares ahorra hasta un 30%.`,
+        description: `Estás pagando ${formatMoney(realExpensesAudit.recurringAmount)} al mes en servicios automáticos (${formatMoney(realExpensesAudit.recurringAmount * 12)} al año). Si cancelas los que casi no usas, puedes recuperar unos ${formatMoney(recPotential)} al mes.`,
         impactMonthly: recPotential,
         impactAnnual: recPotential * 12,
         urgency: 'media',
@@ -177,9 +177,9 @@ export const SavingsAdvisorView: React.FC = () => {
       const wantsOverload = Math.round(realExpensesAudit.wantsAmount - budget503020.wants30);
       proposals.push({
         id: 'wants-overload-proposal',
-        title: `Ajuste en Gastos Flexibles y Deseos`,
-        category: 'Ocio & Gastos Variables',
-        description: `Tus gastos no esenciales representan el ${realExpensesAudit.realWantsPct.toFixed(0)}% del ingreso (ideal máximo 30%). Moderar compras de impulso y salidas puede recuperar hasta ${formatMoney(wantsOverload > 0 ? wantsOverload : budget503020.wants30 * 0.15)} al mes.`,
+        title: `Los gustitos se están pasando del 30%`,
+        category: 'Ocio & Salidas',
+        description: `Tus salidas, compras y entretenimiento representan el ${realExpensesAudit.realWantsPct.toFixed(0)}% de tus ingresos. Si bajas un poco el ritmo en compras espontáneas, puedes quedarte con ${formatMoney(wantsOverload > 0 ? wantsOverload : budget503020.wants30 * 0.15)} extra en el bolsillo.`,
         impactMonthly: wantsOverload > 0 ? wantsOverload : Math.round(budget503020.wants30 * 0.15),
         impactAnnual: (wantsOverload > 0 ? wantsOverload : Math.round(budget503020.wants30 * 0.15)) * 12,
         urgency: 'alta',
@@ -191,9 +191,9 @@ export const SavingsAdvisorView: React.FC = () => {
     if (metrics.isDeficit) {
       proposals.push({
         id: 'deficit-recovery-plan',
-        title: `Plan de Choque por Déficit de Caja`,
-        category: 'Urgencia Financiera',
-        description: `Tus egresos superan tus ingresos por ${formatMoney(metrics.deficitAmount)}. Se recomienda congelar compras extraordinarias y transferir el balance a equilibrio.`,
+        title: `Atención: Gastaste más de lo que ganaste este mes`,
+        category: 'Cuidado con el saldo',
+        description: `Tus gastos superaron a tus ingresos por ${formatMoney(metrics.deficitAmount)}. Conviene frenar compras no esenciales hasta volver a tener saldo positivo.`,
         impactMonthly: metrics.deficitAmount,
         impactAnnual: metrics.deficitAmount * 12,
         urgency: 'alta',
@@ -203,14 +203,14 @@ export const SavingsAdvisorView: React.FC = () => {
       const investSurplus = Math.round(metrics.netCashFlow * 0.50);
       proposals.push({
         id: 'surplus-accelerator-plan',
-        title: `Inyección Automática a Metas y Fondos`,
-        category: 'Crecimiento de Capital',
-        description: `Cuentas con un superávit mensual de ${formatMoney(metrics.netCashFlow)}. Programar el 50% (${formatMoney(investSurplus)}) hacia tus Metas Financieras acelerará tu libertad financiera.`,
+        title: `¡Te está sobrando dinero este mes!`,
+        category: 'Ahorro & Proyectos',
+        description: `Tienes ${formatMoney(metrics.netCashFlow)} libres. Si guardas al menos la mitad (${formatMoney(investSurplus)}) en tus metas o fondo de emergencia, vas a avanzar mucho más rápido.`,
         impactMonthly: investSurplus,
         impactAnnual: investSurplus * 12,
         urgency: 'optimizacion',
         icon: Target,
-        actionText: '+ Crear Meta',
+        actionText: '+ Guardar en una Meta',
         onAction: () => openGoalModal(),
       });
     }
@@ -221,9 +221,9 @@ export const SavingsAdvisorView: React.FC = () => {
       const extraPayment = Math.round(metrics.netCashFlow * 0.30);
       proposals.push({
         id: 'debt-avalanche-proposal',
-        title: `Amortización Acelerada de Deuda: ${topDebt.creditor}`,
-        category: 'Deudas & Créditos',
-        description: `Tu deuda con mayor costo es ${topDebt.creditor} (${topDebt.interestRate || 0}% interés). Destinar un abono extra de ${formatMoney(extraPayment)} al mes reducirá meses de intereses.`,
+        title: `Paga primero la deuda más cara: ${topDebt.creditor}`,
+        category: 'Deudas',
+        description: `La deuda que más caro te cobra es ${topDebt.name} con ${topDebt.creditor} (${topDebt.interestRate || 0}% de interés). Si le abonas ${formatMoney(extraPayment)} extra al mes, te vas a ahorrar meses de intereses.`,
         impactMonthly: extraPayment,
         impactAnnual: extraPayment * 12,
         urgency: 'optimizacion',
@@ -284,7 +284,7 @@ export const SavingsAdvisorView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       
-      {/* Top Banner: AI Dynamic Savings Header */}
+      {/* Top Banner: Real Savings Header */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -293,13 +293,13 @@ export const SavingsAdvisorView: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-white">Asesor Inteligente de Ahorro en Vivo</h2>
+                <h2 className="text-xl font-extrabold text-white">Consejos para tu Bolsillo</h2>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Adaptable a tus Movimientos
+                  En tiempo real
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Analiza tus ingresos y gastos reales en tiempo real, recalculando sugerencias y metas automáticamente con cada cambio.
+                Revisamos tus ingresos y gastos para darte ideas prácticas y ayudarte a que te rinda más el dinero.
               </p>
             </div>
           </div>
@@ -309,49 +309,49 @@ export const SavingsAdvisorView: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>+ Nueva Idea Personalizada</span>
+            <span>+ Anotar mi propia idea de ahorro</span>
           </button>
         </div>
 
         {/* Big Savings Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900/80 border border-emerald-500/30">
-            <span className="text-xs text-slate-300">Potencial de Ahorro Detectado</span>
+            <span className="text-xs text-slate-300">Dinero que podrías ahorrar</span>
             <p className="text-2xl font-black text-emerald-400 mt-1">+{formatMoney(totalMonthlyPotential)}/mes</p>
-            <span className="text-[11px] text-emerald-300/80">{dynamicAiProposals.length} propuestas activas en vivo</span>
+            <span className="text-[11px] text-emerald-300/80">{dynamicAiProposals.length} consejos activos para ti</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/30">
-            <span className="text-xs text-slate-300">Impacto Anual Proyectado</span>
+            <span className="text-xs text-slate-300">Si lo mantienes en 1 año</span>
             <p className="text-2xl font-black text-indigo-300 mt-1">+{formatMoney(totalAnnualPotential)}/año</p>
-            <span className="text-[11px] text-indigo-300/80">Capital extra recuperable</span>
+            <span className="text-[11px] text-indigo-300/80">Plata extra para tus metas</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700">
-            <span className="text-xs text-slate-300">Ahorro ya Aplicado</span>
+            <span className="text-xs text-slate-300">Ahorro que ya aseguraste</span>
             <p className="text-2xl font-black text-white mt-1">+{formatMoney(appliedMonthlySavings)}/mes</p>
             <span className="text-[11px] text-teal-400 font-semibold">
-              {savingsTips.filter(t => t.isApplied).length} optimizaciones fijadas
+              {savingsTips.filter(t => t.isApplied).length} hábitos aplicados
             </span>
           </div>
         </div>
       </div>
 
-      {/* DYNAMIC AI PROPOSALS SECTION (BASED ON LIVE TRANSACTIONS) */}
+      {/* DYNAMIC PROPOSALS SECTION (BASED ON LIVE TRANSACTIONS) */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/40 shadow-card-soft space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Sparkles className="text-emerald-400" size={20} />
-            <h3 className="text-base font-extrabold text-white">Propuestas Dinámicas IA (Calculadas con tus Datos Reales)</h3>
+            <h3 className="text-base font-extrabold text-white">Oportunidades de ahorro según lo que has gastado</h3>
           </div>
           <span className="text-[11px] text-emerald-300/90 font-mono bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-500/30">
-            ⚡ Se actualizan con cada ingreso o gasto
+            ⚡ Se recalcula con cada gasto o ingreso
           </span>
         </div>
 
         {dynamicAiProposals.length === 0 ? (
           <div className="p-6 rounded-2xl bg-slate-800/40 text-center text-slate-400 text-xs">
-            Ingresa tus primeros movimientos en el libro de gastos para que el Asesor IA genere propuestas personalizadas.
+            Anota tus primeros gastos e ingresos en la app para ver consejos personalizados según tus hábitos.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
@@ -419,15 +419,15 @@ export const SavingsAdvisorView: React.FC = () => {
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <PieChartIcon size={18} className="text-emerald-400" />
-              <span>Auditoría Real: Regla 50 / 30 / 20</span>
+              <span>Cómo estás repartiendo tu plata (Regla 50 / 30 / 20)</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Compara tus gastos reales registrados frente a la distribución financiera óptima.
+              Una guía sencilla para saber si estás gastando lo justo en lo necesario, en gustos y en tu ahorro.
             </p>
           </div>
 
           <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-slate-800/60 border border-slate-700">
-            <span className="text-xs text-slate-400">Base Mensual:</span>
+            <span className="text-xs text-slate-400">Tus Ingresos del Mes:</span>
             <span className={`font-extrabold text-sm font-mono ${baseIncome > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
               {formatMoney(baseIncome)}
             </span>
@@ -443,7 +443,7 @@ export const SavingsAdvisorView: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/70 text-xs text-slate-300 flex items-center gap-2">
             <Sparkles size={16} className="text-emerald-400 flex-shrink-0" />
             <span>
-              Aún no tienes ingresos registrados. En cuanto ingreses tu sueldo o cobros, la <strong>Regla 50/30/20</strong> calculará automáticamente tus presupuestos ideales de Necesidades (50%), Deseos (30%) y Ahorro (20%).
+              Aún no has registrado ingresos este mes. En cuanto anotes tu sueldo o cobros, la <strong>Regla 50/30/20</strong> te mostrará cuánto te conviene destinar a lo esencial (50%), a tus gustos (30%) y a tu ahorro (20%).
             </span>
           </div>
         )}
@@ -456,17 +456,17 @@ export const SavingsAdvisorView: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  50% Necesidades
+                  50% Lo Básico para Vivir
                 </span>
-                <h4 className="font-bold text-white text-sm mt-1.5">Gastos Fijos & Esenciales</h4>
+                <h4 className="font-bold text-white text-sm mt-1.5">Casa, Comida y Cuentas</h4>
               </div>
               <div className="text-right">
                 <span className="text-lg font-black text-rose-400">{formatMoney(budget503020.needs50)}</span>
-                <p className="text-[10px] text-slate-400">Real: {formatMoney(realExpensesAudit.needsAmount)} ({realExpensesAudit.realNeedsPct.toFixed(0)}%)</p>
+                <p className="text-[10px] text-slate-400">Llevas: {formatMoney(realExpensesAudit.needsAmount)} ({realExpensesAudit.realNeedsPct.toFixed(0)}%)</p>
               </div>
             </div>
             <p className="text-xs text-slate-400">
-              Vivienda, luz, agua, supermercado, salud y transporte.
+              Arriendo o dividendo, luz, agua, gas, supermercado, salud y pasajes.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
               <div className="h-full bg-rose-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realNeedsPct)}%` }} />
@@ -478,17 +478,17 @@ export const SavingsAdvisorView: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  30% Deseos
+                  30% Gustos y Salidas
                 </span>
-                <h4 className="font-bold text-white text-sm mt-1.5">Gastos Flexibles & Ocio</h4>
+                <h4 className="font-bold text-white text-sm mt-1.5">Ocio, Salidas y Compras</h4>
               </div>
               <div className="text-right">
                 <span className="text-lg font-black text-amber-400">{formatMoney(budget503020.wants30)}</span>
-                <p className="text-[10px] text-slate-400">Real: {formatMoney(realExpensesAudit.wantsAmount)} ({realExpensesAudit.realWantsPct.toFixed(0)}%)</p>
+                <p className="text-[10px] text-slate-400">Llevas: {formatMoney(realExpensesAudit.wantsAmount)} ({realExpensesAudit.realWantsPct.toFixed(0)}%)</p>
               </div>
             </div>
             <p className="text-xs text-slate-400">
-              Recreación, salidas a comer, compras, streaming y hobbies.
+              Comer afuera, salidas con amigos, compras personales, streaming y hobbies.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
               <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realWantsPct)}%` }} />
@@ -500,17 +500,17 @@ export const SavingsAdvisorView: React.FC = () => {
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  20% Ahorro & Metas
+                  20% Tu Ahorro y Futuro
                 </span>
-                <h4 className="font-bold text-white text-sm mt-1.5">Fondos & Inversiones</h4>
+                <h4 className="font-bold text-white text-sm mt-1.5">Fondo de Emergencia y Metas</h4>
               </div>
               <div className="text-right">
                 <span className="text-lg font-black text-emerald-400">{formatMoney(budget503020.savings20)}</span>
-                <p className="text-[10px] text-slate-400">Real: {formatMoney(Math.max(0, metrics.netCashFlow))} ({realExpensesAudit.realSavingsPct.toFixed(0)}%)</p>
+                <p className="text-[10px] text-slate-400">Llevas: {formatMoney(Math.max(0, metrics.netCashFlow))} ({realExpensesAudit.realSavingsPct.toFixed(0)}%)</p>
               </div>
             </div>
             <p className="text-xs text-slate-400">
-              Fondo de reserva, metas financieras y aportes a capital.
+              Plata guardada para imprevistos, proyectos personales y pagar deudas más rápido.
             </p>
             <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
               <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${Math.min(100, realExpensesAudit.realSavingsPct)}%` }} />
@@ -524,8 +524,8 @@ export const SavingsAdvisorView: React.FC = () => {
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h3 className="text-base font-bold text-white">Catálogo de Ideas de Ahorro y Optimización</h3>
-            <p className="text-xs text-slate-400">Marca las estrategias implementadas para registrar tu ahorro mensual retenido.</p>
+            <h3 className="text-base font-bold text-white">Ideas prácticas para recortar gastos</h3>
+            <p className="text-xs text-slate-400">Marca los hábitos que ya estás aplicando para ver cuánta plata estás cuidando al mes.</p>
           </div>
 
           {/* Filter Pills */}

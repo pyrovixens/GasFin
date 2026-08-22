@@ -119,8 +119,7 @@ export const BudgetsView: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      
-      {/* Header Banner */}
+           {/* Header Banner */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -129,13 +128,13 @@ export const BudgetsView: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-white">Control de Presupuestos Mensuales</h2>
+                <h2 className="text-xl font-extrabold text-white">Tus Límites de Gasto del Mes</h2>
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Límites Preventivos
+                  Topes
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Fija topes máximos de gasto por categoría para evitar sobregiros y mantener disciplina financiera.
+                Ponle un tope a cada categoría para no pasarte y saber exactamente cuánta plata te queda disponible.
               </p>
             </div>
           </div>
@@ -147,7 +146,7 @@ export const BudgetsView: React.FC = () => {
               title="Calcular presupuestos automáticos con la Regla 50/30/20"
             >
               <Sparkles size={15} className="text-amber-400" />
-              <span>Sugerir Presupuestos IA</span>
+              <span>Calcular límites recomendados</span>
             </button>
 
             <button
@@ -155,7 +154,7 @@ export const BudgetsView: React.FC = () => {
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-1.5 active:scale-95"
             >
               <Plus size={16} strokeWidth={3} />
-              <span>+ Nuevo Presupuesto</span>
+              <span>+ Nuevo Límite</span>
             </button>
           </div>
         </div>
@@ -163,23 +162,23 @@ export const BudgetsView: React.FC = () => {
         {/* Big KPI Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-6">
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-xs text-slate-400">Presupuesto Asignado</span>
+            <span className="text-xs text-slate-400">Total que planeas gastar</span>
             <p className="text-2xl font-black text-white mt-1">{formatMoney(totals.totalBudget)}</p>
-            <span className="text-[11px] text-slate-400">{budgets.length} categorías controladas</span>
+            <span className="text-[11px] text-slate-400">{budgets.length} categorías con límite</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-xs text-slate-400">Gasto Real Ejecutado</span>
+            <span className="text-xs text-slate-400">Lo que ya has gastado</span>
             <p className="text-2xl font-black text-rose-400 mt-1">{formatMoney(totals.totalSpent)}</p>
             <span className="text-[11px] text-rose-300/80">{totals.overallPct.toFixed(1)}% del límite total</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-xs text-slate-400">Margen Disponible</span>
+            <span className="text-xs text-slate-400">{totals.remaining >= 0 ? 'Plata disponible' : 'Te pasaste por'}</span>
             <p className={`text-2xl font-black mt-1 ${totals.remaining >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {totals.remaining >= 0 ? '+' : ''}{formatMoney(totals.remaining)}
             </p>
-            <span className="text-[11px] text-slate-400">{totals.remaining >= 0 ? 'Disponible para gastar' : 'Exceso de presupuesto'}</span>
+            <span className="text-[11px] text-slate-400">{totals.remaining >= 0 ? 'Aún puedes gastar esto' : 'Exceso de presupuesto'}</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/30">

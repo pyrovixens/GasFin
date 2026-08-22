@@ -44,7 +44,7 @@ export const Sidebar: React.FC = () => {
   const menuItems = [
     {
       id: 'dashboard' as ActiveView,
-      label: 'Dashboard Ejecutivo',
+      label: 'Resumen del Mes',
       icon: LayoutDashboard,
       badge: metrics.isDeficit ? '⚠️ Alerta' : undefined,
       badgeColor: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',
@@ -56,33 +56,33 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'budgets' as ActiveView,
-      label: 'Presupuestos por Categoría',
+      label: 'Límites de Gasto',
       icon: BarChart3,
-      badge: 'Control',
+      badge: 'Límites',
       badgeColor: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
     },
     {
       id: 'calendar' as ActiveView,
-      label: 'Calendario & Vencimientos',
+      label: 'Calendario de Pagos',
       icon: Calendar,
     },
     {
       id: 'debts' as ActiveView,
-      label: 'Optimizador de Deudas',
+      label: 'Control de Deudas',
       icon: CreditCard,
       badge: debts.length > 0 ? `${debts.length}` : undefined,
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     },
     {
       id: 'savings' as ActiveView,
-      label: 'Asesor de Ahorros IA',
+      label: 'Consejos de Ahorro',
       icon: Lightbulb,
       badge: `${savingsTips.filter(t => !t.isApplied).length} ideas`,
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
     },
     {
       id: 'goals' as ActiveView,
-      label: 'Metas Financieras',
+      label: 'Mis Metas de Ahorro',
       icon: Target,
     },
     {
@@ -92,19 +92,19 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'compound' as ActiveView,
-      label: 'Libertad Financiera & Interés',
+      label: 'Calculadora de Inversión',
       icon: Zap,
-      badge: 'FIRE',
+      badge: 'Crece',
       badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
     },
     {
       id: 'reports' as ActiveView,
-      label: 'Reportes & Balances PDF',
+      label: 'Reportes y Descargas',
       icon: FileText,
     },
     {
       id: 'settings' as ActiveView,
-      label: 'Configuración & Datos',
+      label: 'Ajustes y Respaldo',
       icon: Settings,
     },
   ];

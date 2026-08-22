@@ -143,15 +143,15 @@ export const ReceiptScannerModal: React.FC = () => {
         <div className="text-center space-y-1.5 mb-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
             <Scan size={14} className="text-emerald-400" />
-            <span>Escáner Inteligente de Boletas</span>
+            <span>Escanear Boleta</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Lector de Boletas y Facturas
+            Sube una foto de tu Boleta o Factura
           </h2>
 
           <p className="text-xs text-slate-400">
-            Sube una foto o captura de tu recibo para extraer el monto, comercio y registrar el gasto en 1 segundo.
+            Elige la foto de tu comprobante y nosotros rellenamos el monto y la categoría por ti.
           </p>
         </div>
 

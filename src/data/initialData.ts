@@ -119,13 +119,13 @@ export const DEFAULT_EXPENSE_CATEGORIES = [
   'Otros Gastos'
 ];
 
-// Realistic starter savings tips that show up in Asesor IA
+// Realistic starter savings tips written in natural, relatable Spanish
 export const STARTER_SAVINGS_TIPS: SavingsTip[] = [
   {
     id: 'tip-starter-1',
-    title: 'Auditoría de Suscripciones & Streaming',
+    title: 'Revisa las suscripciones que ya no ocupas',
     category: 'Suscripciones & Streaming',
-    description: 'Revisa cuentas de streaming, software y apps que no utilices semanalmente. Cancelar 2 suscripciones genera un alivio inmediato.',
+    description: 'Revisa Netflix, Spotify, gimnasio o apps que pagas todos los meses pero casi no abres. Cancelar un par te libera plata de inmediato.',
     estimatedMonthlySavings: 25000,
     estimatedAnnualSavings: 300000,
     difficulty: 'easy',
@@ -134,9 +134,9 @@ export const STARTER_SAVINGS_TIPS: SavingsTip[] = [
   },
   {
     id: 'tip-starter-2',
-    title: 'Eficiencia en Luz & Servicios Básicos',
+    title: 'Apaga luces y desenchufa lo que no uses',
     category: 'Luz & Electricidad',
-    description: 'Desconectar electrodomésticos en modo stand-by y optimizar el uso de climatización/calefacción reduce hasta un 15% de la cuenta mensual.',
+    description: 'Dejar cargadores enchufados, luces prendidas o la calefacción al máximo todo el día suma bastante en la cuenta a fin de mes.',
     estimatedMonthlySavings: 18000,
     estimatedAnnualSavings: 216000,
     difficulty: 'easy',
@@ -145,9 +145,9 @@ export const STARTER_SAVINGS_TIPS: SavingsTip[] = [
   },
   {
     id: 'tip-starter-3',
-    title: 'Renegociación de Plan de Internet y Celular',
+    title: 'Llama a tu compañía de internet y teléfono',
     category: 'Internet & Teléfono',
-    description: 'Llama a tu proveedor de telecomunicaciones cada 12 meses; habitualmente ofrecen planes de retención con 20% a 30% de descuento.',
+    description: 'Si llevas más de un año con el mismo plan, llama para pedir una rebaja o amenaza con cambiarte. Casi siempre te ofrecen un descuento del 20% al 30%.',
     estimatedMonthlySavings: 15000,
     estimatedAnnualSavings: 180000,
     difficulty: 'medium',
@@ -156,9 +156,9 @@ export const STARTER_SAVINGS_TIPS: SavingsTip[] = [
   },
   {
     id: 'tip-starter-4',
-    title: 'Compras Planificadas de Supermercado al por Mayor',
+    title: 'Ve al supermercado con lista y sin hambre',
     category: 'Supermercado & Alimentos',
-    description: 'Comprar alimentos no perecibles en distribuidoras mayoristas reduce el costo por unidad entre un 12% y un 22%.',
+    description: 'Comprar con una lista clara y comprar cosas no perecibles por mayor o en oferta evita compras por impulso y rinde mucho más.',
     estimatedMonthlySavings: 45000,
     estimatedAnnualSavings: 540000,
     difficulty: 'medium',
@@ -167,9 +167,9 @@ export const STARTER_SAVINGS_TIPS: SavingsTip[] = [
   },
   {
     id: 'tip-starter-5',
-    title: 'Tope Presupuestario para Recreación & Salidas',
+    title: 'La regla de las 48 horas para caprichos',
     category: 'Recreación & Salidas',
-    description: 'Establecer un límite semanal para salidas a restaurantes y delivery permite disfrutar sin desbalancear el flujo de caja.',
+    description: 'Cuando veas algo que quieras comprarte por impulso, espera 2 días. Si después de 48 horas aún lo necesitas, cómpralo; si no, te ahorraste esa plata.',
     estimatedMonthlySavings: 35000,
     estimatedAnnualSavings: 420000,
     difficulty: 'easy',

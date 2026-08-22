@@ -111,10 +111,10 @@ export const DashboardView: React.FC = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-black text-white">
-              ¡Hola, {userName || 'Emprendedor'}! 👋
+              ¡Hola, {userName || 'amigo'}! 👋
             </h2>
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Control Activo
+              Al día
             </span>
           </div>
           <p className="text-xs sm:text-sm text-emerald-300/90 italic font-medium leading-relaxed">
@@ -126,10 +126,10 @@ export const DashboardView: React.FC = () => {
           <button
             onClick={exportDataToExcel}
             className="px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center gap-2 shadow-sm"
-            title="Descargar reporte completo en formato Excel / CSV"
+            title="Descargar tus datos en formato Excel / CSV"
           >
             <FileSpreadsheet size={16} className="text-emerald-400" />
-            <span>Exportar a Excel (.csv)</span>
+            <span>Descargar en Excel</span>
           </button>
         </div>
       </div>
@@ -143,7 +143,7 @@ export const DashboardView: React.FC = () => {
         {/* Card 1: Ingresos */}
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition-all duration-300 shadow-card-soft group relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ingresos Totales</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ingresos del Mes</span>
             <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
               <TrendingUp size={18} />
             </div>
@@ -152,14 +152,14 @@ export const DashboardView: React.FC = () => {
             {formatMoney(metrics.totalIncome)}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400 font-medium">
-            <span>{transactions.filter(t => t.type === 'income').length} ingresos registrados</span>
+            <span>{transactions.filter(t => t.type === 'income').length} cobros o sueldos</span>
           </div>
         </div>
 
         {/* Card 2: Gastos */}
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-rose-500/40 transition-all duration-300 shadow-card-soft group relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gastos Operativos</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gastos del Mes</span>
             <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 group-hover:scale-110 transition-transform">
               <TrendingDown size={18} />
             </div>
@@ -168,14 +168,14 @@ export const DashboardView: React.FC = () => {
             {formatMoney(metrics.totalExpense)}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400 font-medium">
-            <span>{metrics.totalIncome > 0 ? ((metrics.totalExpense / metrics.totalIncome) * 100).toFixed(0) : 0}% del ingreso</span>
+            <span>{metrics.totalIncome > 0 ? ((metrics.totalExpense / metrics.totalIncome) * 100).toFixed(0) : 0}% de lo que ganas</span>
           </div>
         </div>
 
         {/* Card 3: Flujo Neto */}
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-indigo-500/40 transition-all duration-300 shadow-card-soft group relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Flujo Neto (EBITDA)</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Plata que te Queda</span>
             <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
               <Wallet size={18} />
             </div>
@@ -184,14 +184,14 @@ export const DashboardView: React.FC = () => {
             {formatMoney(metrics.netCashFlow)}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400 font-medium">
-            <span>{metrics.runwayMonths} meses de pista de caja</span>
+            <span>{metrics.runwayMonths} meses de respaldo</span>
           </div>
         </div>
 
         {/* Card 4: Tasa de Ahorro */}
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-teal-500/40 transition-all duration-300 shadow-card-soft group relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tasa de Ahorro</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ahorro del Mes</span>
             <div className="p-2.5 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 group-hover:scale-110 transition-transform">
               <PiggyBank size={18} />
             </div>
@@ -209,7 +209,7 @@ export const DashboardView: React.FC = () => {
         {/* Card 5: Pasivo / Deuda */}
         <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all duration-300 shadow-card-soft group relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pasivo & Deuda Total</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Deuda por Pagar</span>
             <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 group-hover:scale-110 transition-transform">
               <CreditCard size={18} />
             </div>
@@ -218,7 +218,7 @@ export const DashboardView: React.FC = () => {
             {formatMoney(metrics.totalDebt)}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-400 font-medium">
-            <span>Cuotas: {formatMoney(metrics.monthlyDebtObligation)}/mes</span>
+            <span>Cuotas mínimas: {formatMoney(metrics.monthlyDebtObligation)}/mes</span>
           </div>
         </div>
 
@@ -236,9 +236,9 @@ export const DashboardView: React.FC = () => {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Activity size={18} className="text-emerald-400" />
-                  <span>Flujo de Caja Histórico & Proyección</span>
+                  <span>Lo que Entra vs. Lo que Sale</span>
                 </h3>
-                <p className="text-xs text-slate-400">Comparativa mensual entre Ingresos, Gastos y Beneficio Neto</p>
+                <p className="text-xs text-slate-400">Revisa cómo van tus ingresos, gastos y lo que te sobra</p>
               </div>
             </div>
 
@@ -268,15 +268,15 @@ export const DashboardView: React.FC = () => {
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-3">
                   <FilePlus size={24} />
                 </div>
-                <h4 className="text-sm font-bold text-white">Comienza registrando tus movimientos</h4>
+                <h4 className="text-sm font-bold text-white">Comienza anotando tus movimientos</h4>
                 <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
-                  El sistema está limpio y listo para tus datos. Añade tu primer ingreso o gasto para visualizar gráficos automáticos.
+                  Todo está listo para ti. Agrega tu primer sueldo, venta o gasto para ver tus números claros.
                 </p>
                 <button
                   onClick={() => openTransactionModal('income')}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-bold shadow-glow-emerald"
                 >
-                  + Registrar Primer Movimiento
+                  + Anotar Primer Movimiento
                 </button>
               </div>
             )}
@@ -286,8 +286,8 @@ export const DashboardView: React.FC = () => {
           <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-base font-bold text-white">Últimos Movimientos Registrados</h3>
-                <p className="text-xs text-slate-400">Libro mayor de transacciones</p>
+                <h3 className="text-base font-bold text-white">Tus Movimientos Recientes</h3>
+                <p className="text-xs text-slate-400">Lo último que has registrado</p>
               </div>
               {transactions.length > 0 && (
                 <button
@@ -355,7 +355,7 @@ export const DashboardView: React.FC = () => {
               </div>
             ) : (
               <div className="p-6 text-center rounded-2xl bg-slate-800/20 text-slate-400 text-xs">
-                No hay movimientos registrados todavía.
+                Aún no tienes movimientos registrados este mes.
               </div>
             )}
           </div>
@@ -369,8 +369,8 @@ export const DashboardView: React.FC = () => {
           <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-base font-bold text-white">Desglose de Gastos por Categoría</h3>
-                <p className="text-xs text-slate-400">Distribución de centros de costo</p>
+                <h3 className="text-base font-bold text-white">¿En qué se te va el dinero?</h3>
+                <p className="text-xs text-slate-400">Tus gastos ordenados por categoría</p>
               </div>
             </div>
 
@@ -412,7 +412,7 @@ export const DashboardView: React.FC = () => {
               </>
             ) : (
               <div className="p-8 text-center rounded-2xl bg-slate-800/20 text-slate-400 text-xs">
-                Registra egresos para visualizar el donut de distribución.
+                Anota tus gastos para ver el gráfico de tus categorías.
               </div>
             )}
           </div>
@@ -423,14 +423,14 @@ export const DashboardView: React.FC = () => {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Target size={18} className="text-teal-400" />
-                  <span>Metas Financieras</span>
+                  <span>Tus Metas de Ahorro</span>
                 </h3>
-                <p className="text-xs text-slate-400">Fondos y objetivos estratégicos</p>
+                <p className="text-xs text-slate-400">Cómo van tus proyectos personales</p>
               </div>
               <button
                 onClick={() => openGoalModal()}
                 className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                title="Nueva Meta"
+                title="Nueva Meta de Ahorro"
               >
                 <Plus size={16} />
               </button>

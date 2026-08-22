@@ -168,9 +168,9 @@ export const CalendarView: React.FC = () => {
               <CalendarIcon size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-white">Calendario Financiero & Vencimientos</h2>
+              <h2 className="text-xl font-extrabold text-white">Calendario de Pagos y Cobros</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Visualiza tus flujos de caja, cobros de sueldo y compromisos de pago distribuidos en el mes.
+                Mira qué días cobras tu sueldo y qué días te toca pagar cuentas o cuotas.
               </p>
             </div>
           </div>

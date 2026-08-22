@@ -104,9 +104,9 @@ export const ReportsView: React.FC = () => {
               <FileText size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-white">Centro de Reportes Financieros & Balances</h2>
+              <h2 className="text-xl font-extrabold text-white">Reportes y Descargas</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Genera estados financieros consolidados listos para exportar a PDF o presentar.
+                Descarga o imprime un resumen ordenado de tus ingresos, gastos y deudas.
               </p>
             </div>
           </div>
@@ -149,11 +149,11 @@ export const ReportsView: React.FC = () => {
                 GF
               </div>
               <h1 className="text-2xl font-black tracking-tight text-white print:text-slate-900">
-                Gast<span className="text-emerald-400 print:text-emerald-700">Fin</span> Reporte Ejecutivo
+                Gast<span className="text-emerald-400 print:text-emerald-700">Fin</span> • Resumen Financiero
               </h1>
             </div>
             <p className="text-xs text-slate-400 print:text-slate-600">
-              Estado de Flujo de Caja, Tesorería & Balance Consolidado
+              Informe detallado de tus ingresos, gastos y ahorros
             </p>
           </div>
 

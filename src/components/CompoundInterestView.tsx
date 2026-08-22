@@ -109,13 +109,13 @@ export const CompoundInterestView: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-extrabold text-white">Calculadora de Libertad Financiera & Interés Compuesto</h2>
+              <h2 className="text-xl font-extrabold text-white">Calculadora de Ahorro e Inversión</h2>
               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Efecto Bola de Nieve
+                Interés Compuesto
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Simula la multiplicación exponencial de tu ahorro mensual a través de inversiones y la regla del 4% (FIRE).
+              Mira cómo crece tu dinero si ahorras un poco cada mes y lo pones a rentar con el tiempo.
             </p>
           </div>
         </div>
@@ -123,27 +123,27 @@ export const CompoundInterestView: React.FC = () => {
         {/* 3 Result Highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-6">
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-xs text-slate-400">Capital de tu Bolsillo</span>
+            <span className="text-xs text-slate-400">Lo que pusiste de tu bolsillo</span>
             <p className="text-2xl font-black text-slate-200 mt-1">{formatMoney(simulation.finalInvested)}</p>
             <span className="text-[11px] text-slate-400">Ahorro total aportado</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 shadow-glow-emerald">
-            <span className="text-xs text-emerald-300 font-bold">Intereses Generados (Ganancia Pura)</span>
+            <span className="text-xs text-emerald-300 font-bold">Ganancia generada (Intereses)</span>
             <p className="text-2xl font-black text-emerald-400 mt-1">+{formatMoney(simulation.finalInterest)}</p>
-            <span className="text-[11px] text-emerald-300/80">Multiplicador x{simulation.interestMultiplier}</span>
+            <span className="text-[11px] text-emerald-300/80">Tu plata creció x{simulation.interestMultiplier}</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/30">
-            <span className="text-xs text-indigo-300 font-bold">Patrimonio Total en {years} Años</span>
+            <span className="text-xs text-indigo-300 font-bold">Tu dinero total en {years} Años</span>
             <p className="text-2xl font-black text-white mt-1">{formatMoney(simulation.finalTotal)}</p>
-            <span className="text-[11px] text-indigo-300/80">Capital + Rendimientos</span>
+            <span className="text-[11px] text-indigo-300/80">Ahorros + Rentabilidad</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-xs text-slate-400">Renta Pasiva Mensual Estimada</span>
+            <span className="text-xs text-slate-400">Ingreso mensual estimado</span>
             <p className="text-2xl font-black text-amber-400 mt-1">{formatMoney(Math.round(fireAnalysis.monthlyPassiveIncomeAtEnd))}</p>
-            <span className="text-[11px] text-slate-400">Al término de los {years} años</span>
+            <span className="text-[11px] text-slate-400">Si vives de los intereses</span>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export const CompoundInterestView: React.FC = () => {
         <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-5">
           <h3 className="text-base font-extrabold text-white flex items-center gap-2">
             <Calculator size={18} className="text-emerald-400" />
-            <span>Parámetros de Inversión</span>
+            <span>Tus números para la simulación</span>
           </h3>
 
           {/* Capital Inicial */}
