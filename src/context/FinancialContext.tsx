@@ -245,66 +245,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         return JSON.parse(saved);
       } catch {
-        // fallback
+        return [];
       }
     }
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
-    return [
-      {
-        id: 'sp-1',
-        title: 'Arriendo / Dividendo Hogar',
-        amount: 450000,
-        category: 'Arriendo / Hipoteca',
-        dueDate: `${currentYear}-${currentMonth}-05`,
-        recurrence: 'monthly',
-        notifyDaysBefore: 5,
-        autoNotifyPush: true,
-        status: 'pending',
-        notes: 'Transferencia bancaria al arrendador.',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'sp-2',
-        title: 'Luz & Electricidad (Enel)',
-        amount: 38000,
-        category: 'Luz & Electricidad',
-        dueDate: `${currentYear}-${currentMonth}-15`,
-        recurrence: 'monthly',
-        notifyDaysBefore: 3,
-        autoNotifyPush: true,
-        status: 'pending',
-        notes: 'Pago automático con tarjeta o cuenta RUT.',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'sp-3',
-        title: 'Internet Fibra Óptica & Móvil',
-        amount: 29990,
-        category: 'Internet & Teléfono',
-        dueDate: `${currentYear}-${currentMonth}-20`,
-        recurrence: 'monthly',
-        notifyDaysBefore: 5,
-        autoNotifyPush: true,
-        status: 'pending',
-        notes: 'Vence el 20 de cada mes.',
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 'sp-4',
-        title: 'Suscripciones Streaming & Cloud',
-        amount: 14990,
-        category: 'Suscripciones & Streaming',
-        dueDate: `${currentYear}-${currentMonth}-28`,
-        recurrence: 'monthly',
-        notifyDaysBefore: 2,
-        autoNotifyPush: true,
-        status: 'pending',
-        notes: 'Cargado a tarjeta de crédito.',
-        createdAt: new Date().toISOString(),
-      }
-    ];
+    return [];
   });
 
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
@@ -995,10 +939,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setDebts([]);
     setGoals([]);
     setSavingsTips([]);
+    setScheduledPayments([]);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.DEBTS);
     localStorage.removeItem(STORAGE_KEYS.GOALS);
     localStorage.removeItem(STORAGE_KEYS.SAVINGS_TIPS);
+    localStorage.removeItem('gastfin_scheduled_payments_v6');
     triggerCelebration();
   };
 
@@ -1016,6 +962,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       debts,
       goals,
       savingsTips,
+      scheduledPayments,
     };
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportBundle, null, 2));
@@ -1141,6 +1088,22 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           title: String(g.title || '').slice(0, 100),
         }));
         if (validGoals.length > 0) setGoals(validGoals);
+      }
+      if (Array.isArray(parsed.scheduledPayments)) {
+        const validScheduled = parsed.scheduledPayments.slice(0, 500).filter((p: any) => 
+          p && typeof p.id === 'string' && !isNaN(Number(p.amount))
+        ).map((p: any) => ({
+          ...p,
+          amount: Math.abs(Number(p.amount)),
+          title: String(p.title || '').slice(0, 100),
+          category: String(p.category || 'Varios').slice(0, 100),
+          dueDate: String(p.dueDate || '').slice(0, 10),
+          recurrence: p.recurrence || 'monthly',
+          notifyDaysBefore: typeof p.notifyDaysBefore === 'number' ? p.notifyDaysBefore : 5,
+          autoNotifyPush: typeof p.autoNotifyPush === 'boolean' ? p.autoNotifyPush : true,
+          status: p.status || 'pending'
+        }));
+        if (validScheduled.length > 0) setScheduledPayments(validScheduled);
       }
       if (parsed.currency && typeof parsed.currency.code === 'string') {
         setCurrency(parsed.currency.code);

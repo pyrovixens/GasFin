@@ -11,7 +11,6 @@ import {
   CheckCircle2, 
   Sparkles, 
   DollarSign,
-  Target,
   CreditCard,
   Bell,
   BellRing,
@@ -20,10 +19,8 @@ import {
   Check,
   CalendarCheck,
   AlertTriangle,
-  Flame,
-  Info,
   Layers,
-  Repeat
+  X
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { ScheduledPayment, ScheduledRecurrence } from '../types';
@@ -34,7 +31,6 @@ export const CalendarView: React.FC = () => {
     transactions, 
     debts, 
     goals, 
-    budgets,
     scheduledPayments,
     addScheduledPayment,
     updateScheduledPayment,
@@ -51,7 +47,7 @@ export const CalendarView: React.FC = () => {
     currentCurrency
   } = useFinancial();
 
-  // Tab: 'calendar' vs 'list'
+  // Tab: 'calendar' vs 'scheduled_list'
   const [activeTab, setActiveTab] = useState<'calendar' | 'scheduled_list'>('calendar');
 
   // Date Navigation State
@@ -68,7 +64,7 @@ export const CalendarView: React.FC = () => {
   // Form State
   const [formTitle, setFormTitle] = useState('');
   const [formAmountInput, setFormAmountInput] = useState('');
-  const [formCategory, setFormCategory] = useState('Servicios Básicos & Hogar');
+  const [formCategory, setFormCategory] = useState(DEFAULT_EXPENSE_CATEGORIES[0] || 'Servicios Básicos & Hogar');
   const [formDueDate, setFormDueDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [formRecurrence, setFormRecurrence] = useState<ScheduledRecurrence>('monthly');
   const [formNotifyDays, setFormNotifyDays] = useState<number>(5);
@@ -206,7 +202,7 @@ export const CalendarView: React.FC = () => {
       const isPaid = p.status === 'paid';
       const isOverdue = !isPaid && diff < 0;
       const isDueToday = !isPaid && diff === 0;
-      const isDueSoon = !isPaid && diff > 0 && diff <= (p.notifyDaysBefore || 5);
+      const isDueSoon = !isPaid && diff > 0 && diff <= (p.notifyDaysBefore ?? 5);
 
       return {
         ...p,
@@ -229,9 +225,9 @@ export const CalendarView: React.FC = () => {
     });
   }, [analyzedPayments, listFilter]);
 
-  // Urgent alerts for top banner (due in <= 5 days or overdue)
+  // Urgent alerts for top banner
   const urgentPayments = useMemo(() => {
-    return analyzedPayments.filter(p => !p.isPaid && (p.isOverdue || p.isDueToday || p.diffDays <= 5));
+    return analyzedPayments.filter(p => !p.isPaid && (p.isOverdue || p.isDueToday || p.diffDays <= (p.notifyDaysBefore ?? 5)));
   }, [analyzedPayments]);
 
   // Modal Handlers
@@ -239,7 +235,7 @@ export const CalendarView: React.FC = () => {
     setEditingPayment(null);
     setFormTitle('');
     setFormAmountInput('');
-    setFormCategory('Servicios Básicos & Hogar');
+    setFormCategory(DEFAULT_EXPENSE_CATEGORIES[0] || 'Servicios Básicos & Hogar');
     setFormDueDate(initialDate || todayStr);
     setFormRecurrence('monthly');
     setFormNotifyDays(5);
@@ -297,7 +293,7 @@ export const CalendarView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       
-      {/* 1. TOP EXECUTIVE HEADER WITH TABS & ACTIONS */}
+      {/* 1. TOP HEADER & TABS */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
@@ -310,13 +306,12 @@ export const CalendarView: React.FC = () => {
                 {notificationPermission === 'granted' ? (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Push Activo (5 Días)
+                    Recordatorios Push Activos
                   </span>
                 ) : (
                   <button
                     onClick={() => requestPushPermission()}
                     className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1 transition-colors"
-                    title="Permitir alertas de navegador"
                   >
                     <BellRing size={11} />
                     Activar Notificaciones Push
@@ -324,7 +319,7 @@ export const CalendarView: React.FC = () => {
                 )}
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Programa tus cuentas y gastos fijos para recibir avisos automáticos 5 días antes o en la fecha exacta de vencimiento.
+                Registra tus cuentas y gastos con recordatorios automáticos 5 días antes o en la fecha de vencimiento.
               </p>
             </div>
           </div>
@@ -341,7 +336,7 @@ export const CalendarView: React.FC = () => {
                 }`}
               >
                 <CalendarIcon size={14} />
-                <span>Calendario</span>
+                <span>Vista Calendario</span>
               </button>
               <button
                 onClick={() => setActiveTab('scheduled_list')}
@@ -386,18 +381,18 @@ export const CalendarView: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                    <span>Tienes {urgentPayments.length} {urgentPayments.length === 1 ? 'pago programado por vencer o vencido' : 'pagos programados por vencer o vencidos'}</span>
+                    <span>Tienes {urgentPayments.length} {urgentPayments.length === 1 ? 'cuenta o gasto por vencer' : 'cuentas o gastos por vencer'}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-black">
                       ALERTA ACTIVA
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-300 mt-0.5">
-                    Notificaciones programadas con 5 días de anticipación para mantener tus finanzas al día.
+                    Notificaciones automáticas activadas con anticipación de 5 días para evitar atrasos.
                   </p>
                 </div>
               </div>
 
-              {/* Quick Pills */}
+              {/* Quick Action Pills */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
                 {urgentPayments.slice(0, 3).map(p => (
                   <div 
@@ -413,7 +408,7 @@ export const CalendarView: React.FC = () => {
                     <button
                       onClick={() => markScheduledPaymentAsPaid(p.id, true)}
                       className="px-2 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold transition-colors"
-                      title="Marcar como pagado y registrar movimiento"
+                      title="Pagar y registrar gasto"
                     >
                       Pagar
                     </button>
@@ -571,7 +566,7 @@ export const CalendarView: React.FC = () => {
                     <button
                       onClick={() => handleOpenAddModal(selectedDateStr)}
                       className="p-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-colors"
-                      title="Programar gasto con recordatorio en este día"
+                      title="Programar gasto en este día"
                     >
                       <Bell size={16} />
                     </button>
@@ -762,16 +757,16 @@ export const CalendarView: React.FC = () => {
           {filteredPayments.length === 0 ? (
             <div className="p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
               <Clock size={36} className="mx-auto text-slate-600" />
-              <h3 className="text-base font-bold text-white">No hay gastos en esta categoría</h3>
+              <h3 className="text-base font-bold text-white">No hay gastos programados</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                No tienes pagos programados que coincidan con este filtro. Puedes crear uno nuevo en cualquier momento.
+                No tienes gastos programados registrados. Agrega tus cuentas para que GastFin te recuerde 5 días antes de cada vencimiento.
               </p>
               <button
                 onClick={() => handleOpenAddModal()}
                 className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5"
               >
                 <Plus size={15} />
-                <span>Programar Nuevo Gasto</span>
+                <span>Programar Mi Primer Gasto</span>
               </button>
             </div>
           ) : (
@@ -839,7 +834,8 @@ export const CalendarView: React.FC = () => {
                       <h4 className="text-base font-bold text-white">{p.title}</h4>
                       <span className="text-xs text-slate-400">{p.category}</span>
 
-                      <div className="mt-3 p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1.5 text-xs">
+                      {/* Complete Clean Information Card */}
+                      <div className="mt-3 p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-2 text-xs">
                         <div className="flex justify-between items-center">
                           <span className="text-slate-400">Monto a Pagar:</span>
                           <span className="font-extrabold text-emerald-400 font-mono text-sm">{formatMoney(p.amount)}</span>
@@ -851,25 +847,25 @@ export const CalendarView: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-slate-400">Frecuencia:</span>
                           <span className="font-semibold text-indigo-300 capitalize">
-                            {p.recurrence === 'monthly' ? 'Mensual' : p.recurrence === 'biweekly' ? 'Quincenal' : p.recurrence === 'weekly' ? 'Semanal' : p.recurrence === 'yearly' ? 'Anual' : 'Una vez'}
+                            {p.recurrence === 'monthly' ? 'Mensual' : p.recurrence === 'biweekly' ? 'Quincenal' : p.recurrence === 'weekly' ? 'Semanal' : p.recurrence === 'yearly' ? 'Anual' : 'Una sola vez'}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-700/50">
+                        <div className="flex justify-between items-center pt-1.5 border-t border-slate-700/50">
                           <span className="text-slate-400 flex items-center gap-1">
-                            <Bell size={11} className="text-amber-400" />
+                            <Bell size={12} className="text-amber-400" />
                             Recordatorio Push:
                           </span>
                           <span className="font-bold text-amber-300">
-                            {p.autoNotifyPush ? `Avisa ${p.notifyDaysBefore} días antes` : 'Desactivado'}
+                            {p.autoNotifyPush ? `Avisa ${p.notifyDaysBefore ?? 5} días antes` : 'Desactivado'}
                           </span>
                         </div>
+                        {p.notes && (
+                          <div className="pt-1.5 border-t border-slate-700/50">
+                            <span className="text-slate-400 block text-[10px]">Notas de Pago:</span>
+                            <span className="text-slate-200 text-[11px] break-words">{p.notes}</span>
+                          </div>
+                        )}
                       </div>
-
-                      {p.notes && (
-                        <p className="text-[11px] text-slate-400 italic mt-2">
-                          "{p.notes}"
-                        </p>
-                      )}
                     </div>
 
                     {/* Action Button */}
@@ -898,22 +894,22 @@ export const CalendarView: React.FC = () => {
         </div>
       )}
 
-      {/* 3. MODAL: CREATE / EDIT SCHEDULED EXPENSE WITH PUSH REMINDERS */}
+      {/* 3. MODAL: CREATE / EDIT SCHEDULED EXPENSE (SIMPLE, CLEAR & COMPREHENSIVE) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                  <BellRing size={20} />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  <BellRing size={18} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-white">
-                    {editingPayment ? 'Editar Gasto Programado' : 'Nuevo Gasto Programado'}
+                  <h3 className="text-base font-bold text-white">
+                    {editingPayment ? 'Editar Gasto Programado' : 'Programar Gasto / Cuenta'}
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Configura avisos automáticos para no olvidar tus pagos.
+                  <p className="text-[11px] text-slate-400">
+                    Ingresa los datos para recibir alertas antes del vencimiento.
                   </p>
                 </div>
               </div>
@@ -922,31 +918,32 @@ export const CalendarView: React.FC = () => {
                 onClick={() => setIsModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-3.5">
               
-              {/* Name / Vendor */}
+              {/* Name */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Nombre de la Cuenta o Pago <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Nombre del Gasto o Proveedor <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Arriendo, Plan Celular, Dividendo, Luz Enel, Seguro"
+                  placeholder="Ej: Arriendo, Plan Celular, Dividendo, Luz, Agua..."
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-bold focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500"
+                  autoFocus
                 />
               </div>
 
               {/* Amount with Live Dot Formatting */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Monto Estimado o Cuota ({currentCurrency.symbol}) <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Monto a Pagar ({currentCurrency.symbol}) <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -955,18 +952,18 @@ export const CalendarView: React.FC = () => {
                   placeholder="0"
                   value={formAmountInput}
                   onChange={(e) => setFormAmountInput(formatInputLive(e.target.value))}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               {/* Category & Due Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Categoría</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Categoría</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
                   >
                     {DEFAULT_EXPENSE_CATEGORIES.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -975,50 +972,41 @@ export const CalendarView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">Fecha de Vencimiento <span className="text-rose-400">*</span></label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Fecha de Vencimiento <span className="text-rose-400">*</span>
+                  </label>
                   <input
                     type="date"
                     required
                     value={formDueDate}
                     onChange={(e) => setFormDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
 
-              {/* Recurrence / Frequency */}
+              {/* Recurrence Selection */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Frecuencia de Repetición</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {[
-                    { id: 'monthly', label: 'Mensual' },
-                    { id: 'biweekly', label: 'Quincenal' },
-                    { id: 'weekly', label: 'Semanal' },
-                    { id: 'yearly', label: 'Anual' },
-                    { id: 'once', label: 'Única Vez' },
-                  ].map(rec => (
-                    <button
-                      key={rec.id}
-                      type="button"
-                      onClick={() => setFormRecurrence(rec.id as ScheduledRecurrence)}
-                      className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all ${
-                        formRecurrence === rec.id
-                          ? 'bg-indigo-500 text-white shadow-sm'
-                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {rec.label}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Frecuencia de Pago</label>
+                <select
+                  value={formRecurrence}
+                  onChange={(e) => setFormRecurrence(e.target.value as ScheduledRecurrence)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="monthly">Mensual (Se repite cada mes)</option>
+                  <option value="biweekly">Quincenal (Cada 14 días)</option>
+                  <option value="weekly">Semanal (Cada 7 días)</option>
+                  <option value="yearly">Anual (Cada año)</option>
+                  <option value="once">Una sola vez (Sin repetición)</option>
+                </select>
               </div>
 
               {/* Push Notification Anticipation Settings */}
-              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 space-y-3">
+              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <BellRing size={16} className="text-amber-400" />
-                    <span className="text-xs font-bold text-white">Anticipación del Recordatorio Push</span>
+                    <BellRing size={15} className="text-amber-400" />
+                    <span className="text-xs font-bold text-white">Recordatorio de Vencimiento</span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -1027,91 +1015,54 @@ export const CalendarView: React.FC = () => {
                       onChange={(e) => setFormAutoPush(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                    <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
                 </div>
 
                 {formAutoPush && (
-                  <>
-                    <p className="text-[11px] text-slate-300">
-                      ¿Con cuántos días de anticipación deseas que te avisemos antes del vencimiento?
-                    </p>
-
-                    {/* Quick Preset Buttons */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {[
-                        { days: 0, label: 'Mismo Día' },
-                        { days: 1, label: '1 Día' },
-                        { days: 3, label: '3 Días' },
-                        { days: 5, label: '5 Días (Recomendado)' },
-                        { days: 7, label: '7 Días' },
-                        { days: 10, label: '10 Días' }
-                      ].map(item => (
-                        <button
-                          key={item.days}
-                          type="button"
-                          onClick={() => setFormNotifyDays(item.days)}
-                          className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                            formNotifyDays === item.days
-                              ? 'bg-amber-500 text-slate-950 shadow-sm'
-                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-                      <span>Aviso configurado: <strong>{formNotifyDays === 0 ? 'El mismo día de vencimiento' : `${formNotifyDays} días antes`}</strong></span>
-                      <button
-                        type="button"
-                        onClick={() => testPushNotification({
-                          id: 'test',
-                          title: formTitle || 'Pago Programado',
-                          amount: parseRawFromDisplay(formAmountInput) || 50000,
-                          category: formCategory,
-                          dueDate: formDueDate,
-                          recurrence: formRecurrence,
-                          notifyDaysBefore: formNotifyDays,
-                          autoNotifyPush: true,
-                          status: 'pending',
-                          createdAt: new Date().toISOString()
-                        })}
-                        className="text-[11px] text-indigo-300 hover:underline flex items-center gap-1"
-                      >
-                        <Bell size={12} />
-                        Probar Notificación
-                      </button>
-                    </div>
-                  </>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Avisar con anticipación de:</label>
+                    <select
+                      value={formNotifyDays}
+                      onChange={(e) => setFormNotifyDays(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 text-xs font-bold focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value={5}>5 días antes (Recomendado)</option>
+                      <option value={3}>3 días antes</option>
+                      <option value={1}>1 día antes</option>
+                      <option value={0}>El mismo día del vencimiento</option>
+                      <option value={7}>7 días antes (1 semana)</option>
+                      <option value={10}>10 días antes</option>
+                      <option value={15}>15 días antes</option>
+                    </select>
+                  </div>
                 )}
               </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Notas o Datos de Pago (Opcional)</label>
-                <textarea
-                  rows={2}
-                  placeholder="Ej: RUT cuenta corriente, código de cliente o link de pago..."
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Notas de Pago (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Código de cliente, link de pago o detalles..."
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               {/* Form Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all"
                 >
                   {editingPayment ? 'Guardar Cambios' : 'Guardar Gasto Programado'}
                 </button>
