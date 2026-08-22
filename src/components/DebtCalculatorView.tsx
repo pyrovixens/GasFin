@@ -28,6 +28,8 @@ export const DebtCalculatorView: React.FC = () => {
   const { 
     debts, 
     formatMoney, 
+    formatInputLive,
+    parseRawFromDisplay,
     openDebtModal, 
     deleteDebt, 
     makeDebtPayment, 
@@ -140,7 +142,7 @@ export const DebtCalculatorView: React.FC = () => {
   const handleMakePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!payingDebt) return;
-    const amt = parseFloat(paymentAmount);
+    const amt = parseRawFromDisplay(paymentAmount);
     if (isNaN(amt) || amt <= 0) return;
 
     makeDebtPayment(payingDebt.id, amt);
@@ -575,7 +577,7 @@ export const DebtCalculatorView: React.FC = () => {
                     <button
                       onClick={() => {
                         setPayingDebt(debt);
-                        setPaymentAmount((debt.minimumPayment ?? 0).toString());
+                        setPaymentAmount(formatInputLive(debt.minimumPayment ?? 0));
                       }}
                       className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-1.5"
                     >
@@ -603,13 +605,11 @@ export const DebtCalculatorView: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Monto del Abono ({currentCurrency.symbol})</label>
                 <div className="relative">
                   <input
-                    type="number"
-                    step="any"
-                    min="1"
-                    max={payingDebt.remainingAmount}
+                    type="text"
+                    inputMode="numeric"
                     required
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => setPaymentAmount(formatInputLive(e.target.value))}
                     className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-emerald-500"
                     placeholder="0"
                   />
@@ -617,14 +617,14 @@ export const DebtCalculatorView: React.FC = () => {
                 <div className="flex gap-2 mt-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentAmount((payingDebt.minimumPayment ?? 0).toString())}
+                    onClick={() => setPaymentAmount(formatInputLive(payingDebt.minimumPayment ?? 0))}
                     className="text-[11px] px-2 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
                   >
                     Cuota Mínima ({formatMoney(payingDebt.minimumPayment)})
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentAmount((payingDebt.remainingAmount ?? 0).toString())}
+                    onClick={() => setPaymentAmount(formatInputLive(payingDebt.remainingAmount ?? 0))}
                     className="text-[11px] px-2 py-1 rounded bg-slate-800 text-emerald-400 hover:bg-slate-700"
                   >
                     Liquidar Todo ({formatMoney(payingDebt.remainingAmount)})

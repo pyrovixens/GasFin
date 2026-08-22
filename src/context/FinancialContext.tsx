@@ -15,7 +15,9 @@ import {
   INITIAL_DEBTS, 
   INITIAL_GOALS, 
   INITIAL_SAVINGS_TIPS, 
-  SUPPORTED_CURRENCIES 
+  SUPPORTED_CURRENCIES,
+  formatCurrencyInputLive,
+  parseCurrencyInputRaw
 } from '../data/initialData';
 import { 
   supabase, 
@@ -76,6 +78,8 @@ interface FinancialContextType {
   // Formatter helpers
   formatMoney: (amount: number, overrideSymbol?: string) => string;
   formatPercent: (value: number) => string;
+  formatInputLive: (valStr: string | number | undefined | null) => string;
+  parseRawFromDisplay: (valStr: string | number | undefined | null) => number;
 
   // Transactions
   transactions: Transaction[];
@@ -504,6 +508,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const formatPercent = (value: number) => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+  };
+
+  const formatInputLive = (valStr: string | number | undefined | null) => {
+    return formatCurrencyInputLive(valStr, currentCurrency?.code || 'CLP');
+  };
+
+  const parseRawFromDisplay = (valStr: string | number | undefined | null) => {
+    return parseCurrencyInputRaw(valStr, currentCurrency?.code || 'CLP');
   };
 
   // Metrics
@@ -947,6 +959,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         unlockCurrencySelector,
         formatMoney,
         formatPercent,
+        formatInputLive,
+        parseRawFromDisplay,
         transactions,
         addTransaction,
         updateTransaction,

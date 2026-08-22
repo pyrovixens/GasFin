@@ -10,6 +10,8 @@ export const GoalModal: React.FC = () => {
     editingGoal, 
     addGoal, 
     updateGoal, 
+    formatInputLive,
+    parseRawFromDisplay,
     currentCurrency 
   } = useFinancial();
 
@@ -23,40 +25,15 @@ export const GoalModal: React.FC = () => {
   const [color, setColor] = useState('#10B981');
   const [notes, setNotes] = useState('');
 
-  const formatInputLive = (valStr: string, currCode: string) => {
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const clean = valStr.replace(/[^\d,]/g, '');
-      const parts = clean.split(',');
-      const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      if (parts.length > 1) return `${intPart},${parts[1].slice(0, 2)}`;
-      return intPart;
-    }
-    const clean = valStr.replace(/[^\d.]/g, '');
-    const parts = clean.split('.');
-    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    if (parts.length > 1) return `${intPart}.${parts[1].slice(0, 2)}`;
-    return intPart;
-  };
-
-  const parseRaw = (valStr: string, currCode: string): number => {
-    if (!valStr) return 0;
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const norm = valStr.replace(/\./g, '').replace(',', '.');
-      return parseFloat(norm) || 0;
-    }
-    const norm = valStr.replace(/,/g, '');
-    return parseFloat(norm) || 0;
-  };
-
   useEffect(() => {
     if (editingGoal) {
       setTitle(editingGoal.title);
       const safeTarget = editingGoal.targetAmount ?? 0;
       setRawTarget(safeTarget);
-      setDisplayTarget(formatInputLive(safeTarget.toString(), currentCurrency.code));
+      setDisplayTarget(formatInputLive(safeTarget));
       const safeCurrent = editingGoal.currentAmount ?? 0;
       setRawCurrent(safeCurrent);
-      setDisplayCurrent(formatInputLive(safeCurrent.toString(), currentCurrency.code));
+      setDisplayCurrent(formatInputLive(safeCurrent));
       setTargetDate(editingGoal.targetDate);
       setCategory(editingGoal.category);
       setColor(editingGoal.color);
@@ -150,9 +127,9 @@ export const GoalModal: React.FC = () => {
                 placeholder="0"
                 value={displayTarget}
                 onChange={(e) => {
-                  const fmt = formatInputLive(e.target.value, currentCurrency.code);
+                  const fmt = formatInputLive(e.target.value);
                   setDisplayTarget(fmt);
-                  setRawTarget(parseRaw(fmt, currentCurrency.code));
+                  setRawTarget(parseRawFromDisplay(fmt));
                 }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:outline-none focus:border-teal-500"
               />
@@ -168,9 +145,9 @@ export const GoalModal: React.FC = () => {
                 placeholder="0"
                 value={displayCurrent}
                 onChange={(e) => {
-                  const fmt = formatInputLive(e.target.value, currentCurrency.code);
+                  const fmt = formatInputLive(e.target.value);
                   setDisplayCurrent(fmt);
-                  setRawCurrent(parseRaw(fmt, currentCurrency.code));
+                  setRawCurrent(parseRawFromDisplay(fmt));
                 }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:outline-none focus:border-teal-500"
               />

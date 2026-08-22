@@ -26,13 +26,20 @@ import {
 import { useFinancial } from '../context/FinancialContext';
 
 export const CompoundInterestView: React.FC = () => {
-  const { metrics, formatMoney, currentCurrency } = useFinancial();
+  const { metrics, formatMoney, formatInputLive, parseRawFromDisplay, currentCurrency } = useFinancial();
 
   // Inputs
   const [initialCapital, setInitialCapital] = useState<number>(1000000);
+  const [initialCapitalDisplay, setInitialCapitalDisplay] = useState<string>(() => formatInputLive(1000000));
+
   const [monthlyContribution, setMonthlyContribution] = useState<number>(() => {
     return metrics.netCashFlow > 0 ? Math.round(metrics.netCashFlow * 0.5) : 100000;
   });
+  const [monthlyContributionDisplay, setMonthlyContributionDisplay] = useState<string>(() => {
+    const init = metrics.netCashFlow > 0 ? Math.round(metrics.netCashFlow * 0.5) : 100000;
+    return formatInputLive(init);
+  });
+
   const [annualRate, setAnnualRate] = useState<number>(8); // 8% APR average
   const [years, setYears] = useState<number>(10);
 
@@ -162,11 +169,14 @@ export const CompoundInterestView: React.FC = () => {
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-300">Capital Inicial ({currentCurrency.symbol})</label>
             <input
-              type="number"
-              min="0"
-              step="10000"
-              value={initialCapital}
-              onChange={(e) => setInitialCapital(parseFloat(e.target.value) || 0)}
+              type="text"
+              inputMode="numeric"
+              value={initialCapitalDisplay}
+              onChange={(e) => {
+                const formatted = formatInputLive(e.target.value);
+                setInitialCapitalDisplay(formatted);
+                setInitialCapital(parseRawFromDisplay(formatted));
+              }}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
             />
           </div>
@@ -176,18 +186,25 @@ export const CompoundInterestView: React.FC = () => {
             <div className="flex justify-between items-center text-xs font-bold">
               <span className="text-slate-300">Aporte Mensual Recurrente</span>
               <button
-                onClick={() => setMonthlyContribution(Math.max(0, Math.round(metrics.netCashFlow * 0.5)))}
+                onClick={() => {
+                  const calculated = Math.max(0, Math.round(metrics.netCashFlow * 0.5));
+                  setMonthlyContribution(calculated);
+                  setMonthlyContributionDisplay(formatInputLive(calculated));
+                }}
                 className="text-[10px] text-emerald-400 hover:underline"
               >
                 Usar 50% de mi flujo libre
               </button>
             </div>
             <input
-              type="number"
-              min="0"
-              step="5000"
-              value={monthlyContribution}
-              onChange={(e) => setMonthlyContribution(parseFloat(e.target.value) || 0)}
+              type="text"
+              inputMode="numeric"
+              value={monthlyContributionDisplay}
+              onChange={(e) => {
+                const formatted = formatInputLive(e.target.value);
+                setMonthlyContributionDisplay(formatted);
+                setMonthlyContribution(parseRawFromDisplay(formatted));
+              }}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
             />
           </div>

@@ -59,6 +59,8 @@ export const GoalsView: React.FC = () => {
     goals, 
     addGoal,
     formatMoney, 
+    formatInputLive,
+    parseRawFromDisplay,
     openGoalModal, 
     deleteGoal, 
     contributeToGoal,
@@ -78,7 +80,7 @@ export const GoalsView: React.FC = () => {
   const handleContributeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedGoal) return;
-    const amt = parseFloat(contributionAmount);
+    const amt = parseRawFromDisplay(contributionAmount);
     if (isNaN(amt) || amt <= 0) return;
 
     contributeToGoal(selectedGoal.id, amt);
@@ -347,12 +349,11 @@ export const GoalsView: React.FC = () => {
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Monto del Aporte ({currentCurrency.symbol})</label>
                 <input
-                  type="number"
-                  step="any"
-                  min="1"
+                  type="text"
+                  inputMode="numeric"
                   required
                   value={contributionAmount}
-                  onChange={(e) => setContributionAmount(e.target.value)}
+                  onChange={(e) => setContributionAmount(formatInputLive(e.target.value))}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-sm focus:outline-none focus:border-emerald-500"
                   placeholder="0"
                 />

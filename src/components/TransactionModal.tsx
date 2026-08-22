@@ -23,6 +23,8 @@ export const TransactionModal: React.FC = () => {
     editingTransaction, 
     addTransaction, 
     updateTransaction,
+    formatInputLive,
+    parseRawFromDisplay,
     currentCurrency 
   } = useFinancial();
 
@@ -59,44 +61,13 @@ export const TransactionModal: React.FC = () => {
     initialY: 0,
   });
 
-  // Helper to format live string as user types
-  const formatInputLive = (valStr: string, currCode: string) => {
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const clean = valStr.replace(/[^\d,]/g, '');
-      const parts = clean.split(',');
-      const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      if (parts.length > 1) {
-        return `${intPart},${parts[1].slice(0, 2)}`;
-      }
-      return intPart;
-    }
-
-    const clean = valStr.replace(/[^\d.]/g, '');
-    const parts = clean.split('.');
-    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    if (parts.length > 1) {
-      return `${intPart}.${parts[1].slice(0, 2)}`;
-    }
-    return intPart;
-  };
-
-  const parseRawFromDisplay = (valStr: string, currCode: string): number => {
-    if (!valStr) return 0;
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const normalized = valStr.replace(/\./g, '').replace(',', '.');
-      return parseFloat(normalized) || 0;
-    }
-    const normalized = valStr.replace(/,/g, '');
-    return parseFloat(normalized) || 0;
-  };
-
   // Sync editing transaction or reset with fresh current date & time
   useEffect(() => {
     if (editingTransaction) {
       setType(editingTransaction.type);
       const safeAmt = editingTransaction.amount ?? 0;
       setRawAmount(safeAmt);
-      const formatted = formatInputLive(safeAmt.toString(), currentCurrency.code);
+      const formatted = formatInputLive(safeAmt);
       setDisplayAmount(formatted);
       setCategory(editingTransaction.category);
       setDescription(editingTransaction.description);
@@ -121,9 +92,9 @@ export const TransactionModal: React.FC = () => {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
-    const formatted = formatInputLive(rawVal, currentCurrency.code);
+    const formatted = formatInputLive(rawVal);
     setDisplayAmount(formatted);
-    const parsed = parseRawFromDisplay(formatted, currentCurrency.code);
+    const parsed = parseRawFromDisplay(formatted);
     setRawAmount(parsed);
   };
 

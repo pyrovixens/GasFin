@@ -36,6 +36,8 @@ export const BudgetsView: React.FC = () => {
     deleteBudget, 
     transactions, 
     formatMoney, 
+    formatInputLive,
+    parseRawFromDisplay,
     metrics,
     currentCurrency,
     openTransactionModal 
@@ -166,7 +168,7 @@ export const BudgetsView: React.FC = () => {
   // Handle Base Money Editing
   const handleSaveBaseMoney = (e: React.FormEvent) => {
     e.preventDefault();
-    const val = parseFloat(tempBaseInput);
+    const val = parseRawFromDisplay(tempBaseInput);
     if (!isNaN(val) && val > 0) {
       setCustomBaseMoney(val);
       localStorage.setItem('gastfin_custom_budget_base', val.toString());
@@ -197,7 +199,7 @@ export const BudgetsView: React.FC = () => {
   const handleOpenEdit = (b: CategoryBudget) => {
     setEditingBudget(b);
     setCategoryInput(b.category);
-    setLimitInput((b.limitAmount ?? 0).toString());
+    setLimitInput(formatInputLive(b.limitAmount ?? 0));
     setWarningThreshold(b.warningThresholdPct ?? 80);
     setNotesInput(b.notes || '');
     setIsModalOpen(true);
@@ -206,7 +208,7 @@ export const BudgetsView: React.FC = () => {
   // Form Submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const limit = parseFloat(limitInput);
+    const limit = parseRawFromDisplay(limitInput);
     if (isNaN(limit) || limit <= 0 || !categoryInput.trim()) return;
 
     if (editingBudget) {
@@ -326,12 +328,12 @@ export const BudgetsView: React.FC = () => {
               {isEditingBase ? (
                 <form onSubmit={handleSaveBaseMoney} className="flex items-center gap-1.5">
                   <input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Monto base ($)"
                     value={tempBaseInput}
-                    onChange={(e) => setTempBaseInput(e.target.value)}
-                    className="w-32 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    onChange={(e) => setTempBaseInput(formatInputLive(e.target.value))}
+                    className="w-36 px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
                     autoFocus
                   />
                   <button
@@ -352,7 +354,7 @@ export const BudgetsView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      setTempBaseInput(effectiveBaseMoney > 0 ? effectiveBaseMoney.toString() : '');
+                      setTempBaseInput(effectiveBaseMoney > 0 ? formatInputLive(effectiveBaseMoney) : '');
                       setIsEditingBase(true);
                     }}
                     className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
@@ -844,18 +846,18 @@ export const BudgetsView: React.FC = () => {
                 </div>
 
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   required
-                  min="1"
-                  placeholder="Ej: 200000"
+                  placeholder="Ej: 200.000"
                   value={limitInput}
-                  onChange={(e) => setLimitInput(e.target.value)}
+                  onChange={(e) => setLimitInput(formatInputLive(e.target.value))}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm font-bold focus:outline-none focus:border-indigo-500"
                 />
 
                 {/* Quick Percentage Calculator Buttons */}
                 {effectiveBaseMoney > 0 && (
-                  <div className="flex items-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                     <span className="text-[10px] text-slate-400 font-semibold mr-1">Calcular %:</span>
                     {[10, 15, 20, 25, 30, 50].map(pct => {
                       const calculated = Math.round(effectiveBaseMoney * (pct / 100));
@@ -863,7 +865,7 @@ export const BudgetsView: React.FC = () => {
                         <button
                           key={pct}
                           type="button"
-                          onClick={() => setLimitInput(calculated.toString())}
+                          onClick={() => setLimitInput(formatInputLive(calculated))}
                           className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-indigo-300 border border-slate-700 hover:border-indigo-500 transition-all"
                           title={`${pct}% de ${formatMoney(effectiveBaseMoney)} = ${formatMoney(calculated)}`}
                         >

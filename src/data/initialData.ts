@@ -208,3 +208,46 @@ export const CATEGORY_COLORS: Record<string, string> = {
   'Amortización de Deuda': '#EAB308',
   'Otros Gastos': '#94A3B8',
 };
+
+/**
+ * Live formatter for currency inputs with dynamic dots/commas as the user types.
+ */
+export const formatCurrencyInputLive = (valStr: string | number | undefined | null, currCode: string = 'CLP'): string => {
+  if (valStr === undefined || valStr === null || valStr === '') return '';
+  const str = typeof valStr === 'number' ? (isNaN(valStr) ? '' : valStr.toString()) : valStr;
+
+  // Currencies using dot '.' as thousand separator and comma ',' as decimal separator (CLP, COP, EUR, ARS)
+  if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
+    const clean = str.replace(/[^\d,]/g, '');
+    const parts = clean.split(',');
+    const intPart = (parts[0] || '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (parts.length > 1) {
+      return `${intPart},${parts[1].slice(0, 2)}`;
+    }
+    return intPart;
+  }
+
+  // Currencies using comma ',' as thousand separator and dot '.' as decimal separator (USD, MXN, PEN)
+  const clean = str.replace(/[^\d.]/g, '');
+  const parts = clean.split('.');
+  const intPart = (parts[0] || '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (parts.length > 1) {
+    return `${intPart}.${parts[1].slice(0, 2)}`;
+  }
+  return intPart;
+};
+
+/**
+ * Parser from live formatted input string to clean numeric float.
+ */
+export const parseCurrencyInputRaw = (valStr: string | number | undefined | null, currCode: string = 'CLP'): number => {
+  if (valStr === undefined || valStr === null || valStr === '') return 0;
+  if (typeof valStr === 'number') return isNaN(valStr) ? 0 : valStr;
+
+  if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
+    const normalized = valStr.replace(/\./g, '').replace(',', '.');
+    return parseFloat(normalized) || 0;
+  }
+  const normalized = valStr.replace(/,/g, '');
+  return parseFloat(normalized) || 0;
+};

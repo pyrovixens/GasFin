@@ -10,6 +10,8 @@ export const DebtModal: React.FC = () => {
     editingDebt, 
     addDebt, 
     updateDebt, 
+    formatInputLive,
+    parseRawFromDisplay,
     currentCurrency 
   } = useFinancial();
 
@@ -24,42 +26,17 @@ export const DebtModal: React.FC = () => {
   const [category, setCategory] = useState<DebtCategory>('bank_loan');
   const [notes, setNotes] = useState('');
 
-  const formatInputLive = (valStr: string, currCode: string) => {
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const clean = valStr.replace(/[^\d,]/g, '');
-      const parts = clean.split(',');
-      const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      if (parts.length > 1) return `${intPart},${parts[1].slice(0, 2)}`;
-      return intPart;
-    }
-    const clean = valStr.replace(/[^\d.]/g, '');
-    const parts = clean.split('.');
-    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    if (parts.length > 1) return `${intPart}.${parts[1].slice(0, 2)}`;
-    return intPart;
-  };
-
-  const parseRaw = (valStr: string, currCode: string): number => {
-    if (!valStr) return 0;
-    if (currCode === 'CLP' || currCode === 'COP' || currCode === 'EUR' || currCode === 'ARS') {
-      const norm = valStr.replace(/\./g, '').replace(',', '.');
-      return parseFloat(norm) || 0;
-    }
-    const norm = valStr.replace(/,/g, '');
-    return parseFloat(norm) || 0;
-  };
-
   useEffect(() => {
     if (editingDebt) {
       setName(editingDebt.name);
       setCreditor(editingDebt.creditor);
       const safeRemaining = editingDebt.remainingAmount ?? 0;
       setRawTotal(safeRemaining);
-      setDisplayTotal(formatInputLive(safeRemaining.toString(), currentCurrency.code));
+      setDisplayTotal(formatInputLive(safeRemaining));
       setInterestRate((editingDebt.interestRate ?? 0).toString());
       const safeMinPay = editingDebt.minimumPayment ?? 0;
       setRawMinPay(safeMinPay);
-      setDisplayMinPay(formatInputLive(safeMinPay.toString(), currentCurrency.code));
+      setDisplayMinPay(formatInputLive(safeMinPay));
       setDueDate(editingDebt.dueDate);
       setCategory(editingDebt.category);
       setNotes(editingDebt.notes || '');
@@ -156,9 +133,9 @@ export const DebtModal: React.FC = () => {
                 placeholder="0"
                 value={displayTotal}
                 onChange={(e) => {
-                  const fmt = formatInputLive(e.target.value, currentCurrency.code);
+                  const fmt = formatInputLive(e.target.value);
                   setDisplayTotal(fmt);
-                  setRawTotal(parseRaw(fmt, currentCurrency.code));
+                  setRawTotal(parseRawFromDisplay(fmt));
                 }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:outline-none focus:border-amber-500"
               />
@@ -187,9 +164,9 @@ export const DebtModal: React.FC = () => {
                 placeholder="0"
                 value={displayMinPay}
                 onChange={(e) => {
-                  const fmt = formatInputLive(e.target.value, currentCurrency.code);
+                  const fmt = formatInputLive(e.target.value);
                   setDisplayMinPay(fmt);
-                  setRawMinPay(parseRaw(fmt, currentCurrency.code));
+                  setRawMinPay(parseRawFromDisplay(fmt));
                 }}
                 className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono font-bold text-sm focus:outline-none focus:border-amber-500"
               />

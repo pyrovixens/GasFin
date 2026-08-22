@@ -22,6 +22,8 @@ export const ReceiptScannerModal: React.FC = () => {
     setIsReceiptScannerOpen, 
     addTransaction, 
     formatMoney, 
+    formatInputLive,
+    parseRawFromDisplay,
     currentCurrency 
   } = useFinancial();
 
@@ -30,6 +32,7 @@ export const ReceiptScannerModal: React.FC = () => {
   const [scanResult, setScanResult] = useState<{
     vendor: string;
     amount: number;
+    displayAmount?: string;
     date: string;
     category: string;
     description: string;
@@ -95,6 +98,7 @@ export const ReceiptScannerModal: React.FC = () => {
       setScanResult({
         vendor,
         amount,
+        displayAmount: formatInputLive(amount),
         date: todayStr,
         category,
         description: `Boleta / Factura ${vendor}`
@@ -213,11 +217,15 @@ export const ReceiptScannerModal: React.FC = () => {
                   <div>
                     <label className="block text-[11px] font-bold text-slate-400 mb-1">Monto Exacto ({currentCurrency.symbol})</label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       required
-                      min="1"
-                      value={scanResult.amount}
-                      onChange={(e) => setScanResult({ ...scanResult, amount: parseFloat(e.target.value) || 0 })}
+                      value={scanResult.displayAmount ?? formatInputLive(scanResult.amount)}
+                      onChange={(e) => setScanResult({ 
+                        ...scanResult, 
+                        displayAmount: formatInputLive(e.target.value),
+                        amount: parseRawFromDisplay(e.target.value) 
+                      })}
                       className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
