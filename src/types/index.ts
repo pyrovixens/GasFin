@@ -61,6 +61,8 @@ export interface CategoryBudget {
   category: string;
   limitAmount: number;
   period: 'monthly';
+  warningThresholdPct?: number; // percentage at which early warning alert triggers (defaults to 80%)
+  notes?: string;
   createdAt: string;
 }
 

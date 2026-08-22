@@ -46,6 +46,7 @@ export const DashboardView: React.FC = () => {
     transactions, 
     debts, 
     goals, 
+    budgets,
     savingsTips, 
     toggleSavingsTip,
     openTransactionModal, 
@@ -80,6 +81,34 @@ export const DashboardView: React.FC = () => {
       color: CATEGORY_COLORS[name] || '#94A3B8',
     })).sort((a, b) => b.value - a.value);
   }, [transactions]);
+
+  // Budget Limits Warning / Exceeded Alerts
+  const budgetAlerts = useMemo(() => {
+    const expenseMap: Record<string, number> = {};
+    transactions
+      .filter(t => t.type === 'expense')
+      .forEach(t => {
+        expenseMap[t.category] = (expenseMap[t.category] || 0) + t.amount;
+      });
+
+    const exceeded: Array<{ category: string; spent: number; limit: number; diff: number }> = [];
+    const warning: Array<{ category: string; spent: number; limit: number; remaining: number; pct: number }> = [];
+
+    budgets.forEach(b => {
+      const spent = expenseMap[b.category] || 0;
+      const limit = b.limitAmount || 0;
+      const pct = limit > 0 ? (spent / limit) * 100 : 0;
+      const threshold = b.warningThresholdPct ?? 80;
+
+      if (spent > limit) {
+        exceeded.push({ category: b.category, spent, limit, diff: spent - limit });
+      } else if (pct >= threshold) {
+        warning.push({ category: b.category, spent, limit, remaining: limit - spent, pct });
+      }
+    });
+
+    return { exceeded, warning, totalAlerts: exceeded.length + warning.length };
+  }, [budgets, transactions]);
 
   // Recent transactions
   const recentTransactions = useMemo(() => {
@@ -136,6 +165,49 @@ export const DashboardView: React.FC = () => {
 
       {/* Deficit Alert Banner if Gastos > Ingresos */}
       <DeficitAlertBanner />
+
+      {/* Budget Limits Alert Banner (Exceeded or Warning) */}
+      {budgetAlerts.totalAlerts > 0 && (
+        <div className={`rounded-3xl p-4 sm:p-5 border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg transition-all ${
+          budgetAlerts.exceeded.length > 0
+            ? 'bg-gradient-to-r from-rose-950/80 via-red-900/50 to-slate-900 border-rose-500/70 text-white shadow-glow-rose'
+            : 'bg-gradient-to-r from-amber-950/80 via-yellow-900/50 to-slate-900 border-amber-500/70 text-white shadow-glow-amber'
+        }`}>
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className={`p-2.5 rounded-2xl flex-shrink-0 animate-pulse ${
+              budgetAlerts.exceeded.length > 0 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+            }`}>
+              <AlertCircle size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                  budgetAlerts.exceeded.length > 0 ? 'bg-rose-500 text-white' : 'bg-amber-500 text-slate-950'
+                }`}>
+                  {budgetAlerts.exceeded.length > 0 ? '🚨 Límite de Gasto Superado' : '⚠️ Cerca del Límite de Gasto'}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white mt-1">
+                {budgetAlerts.exceeded.length > 0
+                  ? `Te has pasado del tope en: ${budgetAlerts.exceeded.map(e => e.category).join(', ')}`
+                  : `Estás cerca del tope en: ${budgetAlerts.warning.map(w => w.category).join(', ')}`}
+              </p>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                {budgetAlerts.exceeded.length > 0
+                  ? `Exceso acumulado: ${formatMoney(budgetAlerts.exceeded.reduce((acc, e) => acc + e.diff, 0))}. Revisa tus límites para proteger tu plata.`
+                  : 'Modera tus salidas o compras en estas categorías para no terminar en sobregiro.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveView('budgets')}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 hover:border-slate-600 transition-colors flex items-center gap-1.5 flex-shrink-0 self-start sm:self-auto"
+          >
+            <span>Ver Límites de Gasto</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* TOP KPI CARDS ROW (5 Columns / Responsive Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

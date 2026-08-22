@@ -100,7 +100,7 @@ interface FinancialContextType {
   // Category Budgets
   budgets: CategoryBudget[];
   addBudget: (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => void;
-  updateBudget: (id: string, limitAmount: number) => void;
+  updateBudget: (id: string, updates: Partial<Omit<CategoryBudget, 'id' | 'createdAt'>> | number) => void;
   deleteBudget: (id: string) => void;
 
   // Savings Tips
@@ -354,10 +354,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     triggerCelebration();
   };
 
-  const updateBudget = (id: string, limitAmount: number) => {
+  const updateBudget = (id: string, updates: Partial<Omit<CategoryBudget, 'id' | 'createdAt'>> | number) => {
     setBudgets(prev => prev.map(b => {
       if (b.id === id) {
-        const updated = { ...b, limitAmount };
+        const updated = typeof updates === 'number' ? { ...b, limitAmount: updates } : { ...b, ...updates };
         if (supabaseUser) syncBudgetToSupabase(updated, supabaseUser.id);
         return updated;
       }
