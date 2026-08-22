@@ -11,7 +11,11 @@ import {
   X,
   Sliders,
   DollarSign,
-  TrendingDown
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES } from '../data/initialData';
@@ -29,7 +33,8 @@ export const BudgetsView: React.FC = () => {
     formatInputLive,
     parseRawFromDisplay,
     metrics,
-    currentCurrency
+    currentCurrency,
+    openTransactionModal
   } = useFinancial();
 
   // Custom base money in account (if user wants to customize instead of total income)
@@ -58,31 +63,80 @@ export const BudgetsView: React.FC = () => {
     return metrics.totalIncome > 0 ? metrics.totalIncome : 0;
   }, [customBaseMoney, metrics.totalIncome]);
 
-  // Calculate actual spending per category
+  // 1. Calculate actual spending per category from real transactions
   const spendingByCategory = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { total: number; count: number }> = {};
     transactions
       .filter(t => t.type === 'expense')
       .forEach(t => {
-        map[t.category] = (map[t.category] || 0) + t.amount;
+        const cat = t.category || 'Otros Egresos';
+        if (!map[cat]) {
+          map[cat] = { total: 0, count: 0 };
+        }
+        map[cat].total += t.amount;
+        map[cat].count += 1;
       });
     return map;
   }, [transactions]);
 
+  // 2. Build Unified Category Items: seamlessly combines categories with real expenses AND custom budgets
+  const unifiedCategories = useMemo(() => {
+    const categoriesSet = new Set<string>();
+
+    Object.keys(spendingByCategory).forEach(cat => categoriesSet.add(cat));
+    budgets.forEach(b => categoriesSet.add(b.category));
+
+    const budgetMap = new Map<string, CategoryBudget>();
+    budgets.forEach(b => budgetMap.set(b.category, b));
+
+    const list = Array.from(categoriesSet).map(catName => {
+      const budget = budgetMap.get(catName) || null;
+      const spentData = spendingByCategory[catName] || { total: 0, count: 0 };
+      const spent = spentData.total;
+      const limit = budget ? budget.limitAmount : 0;
+      const hasBudget = budget !== null && limit > 0;
+      const pct = hasBudget ? (spent / limit) * 100 : 0;
+      const remaining = hasBudget ? limit - spent : 0;
+      const threshold = budget?.warningThresholdPct ?? 80;
+      const isExceeded = hasBudget && spent > limit;
+      const isWarning = hasBudget && !isExceeded && pct >= threshold;
+
+      return {
+        category: catName,
+        budget,
+        hasBudget,
+        spent,
+        txCount: spentData.count,
+        limit,
+        pct,
+        remaining,
+        threshold,
+        isExceeded,
+        isWarning,
+        notes: budget?.notes || '',
+      };
+    });
+
+    // Sort by spent descending
+    return list.sort((a, b) => b.spent - a.spent);
+  }, [spendingByCategory, budgets]);
+
   // Totals calculations
   const totals = useMemo(() => {
     const totalBudget = budgets.reduce((acc, b) => acc + (b.limitAmount || 0), 0);
-    const totalSpentInBudgets = budgets.reduce((acc, b) => acc + (spendingByCategory[b.category] || 0), 0);
+    const totalSpentInBudgets = budgets.reduce((acc, b) => acc + (spendingByCategory[b.category]?.total || 0), 0);
+    const totalRealExpenses = metrics.totalExpense;
     const remainingInBudget = totalBudget - totalSpentInBudgets;
     const overallPct = totalBudget > 0 ? (totalSpentInBudgets / totalBudget) * 100 : 0;
 
     return {
       totalBudget,
       totalSpentInBudgets,
+      totalRealExpenses,
       remainingInBudget,
       overallPct
     };
-  }, [budgets, spendingByCategory]);
+  }, [budgets, spendingByCategory, metrics.totalExpense]);
 
   // Handlers for Base Money
   const handleSaveBaseMoney = () => {
@@ -101,10 +155,10 @@ export const BudgetsView: React.FC = () => {
   };
 
   // Modal Handlers
-  const handleOpenAdd = () => {
+  const handleOpenAdd = (presetCategory?: string, presetLimit?: number) => {
     setEditingBudget(null);
-    setCategoryInput(DEFAULT_EXPENSE_CATEGORIES[0] || 'Alimentación & Supermercado');
-    setLimitInput('');
+    setCategoryInput(presetCategory || DEFAULT_EXPENSE_CATEGORIES[0] || 'Alimentación & Supermercado');
+    setLimitInput(presetLimit ? formatInputLive(presetLimit) : '');
     setWarningThreshold(80);
     setNotesInput('');
     setIsModalOpen(true);
@@ -155,9 +209,9 @@ export const BudgetsView: React.FC = () => {
               <BarChart3 size={26} />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white">Límites de Gasto del Mes</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">Límites & Control de Egresos</h2>
               <p className="text-xs text-slate-400 mt-1">
-                Fija topes máximos por categoría para cuidar tu dinero y recibir alertas antes de pasarte.
+                Refleja automáticamente tus egresos reales por categoría para fijar topes y evitar sobregiros sin doble llenado.
               </p>
             </div>
           </div>
@@ -179,7 +233,7 @@ export const BudgetsView: React.FC = () => {
             )}
 
             <button
-              onClick={handleOpenAdd}
+              onClick={() => handleOpenAdd()}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
             >
               <Plus size={16} strokeWidth={2.5} />
@@ -188,7 +242,7 @@ export const BudgetsView: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. THREE CLEAN SUMMARY CARDS */}
+        {/* 2. THREE REAL FINANCIAL SUMMARY CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-6">
           
           {/* Card 1: Dinero Base */}
@@ -214,12 +268,28 @@ export const BudgetsView: React.FC = () => {
                 {formatMoney(effectiveBaseMoney)}
               </p>
               <span className="text-[10px] text-slate-400">
-                {customBaseMoney !== null ? 'Monto manual configurado' : 'Calculado de tus ingresos reales'}
+                {customBaseMoney !== null ? 'Monto manual configurado' : `${metrics.totalIncome > 0 ? 'Tus ingresos reales' : 'Sin ingresos registrados'}`}
               </span>
             </div>
           </div>
 
-          {/* Card 2: Total en Topes */}
+          {/* Card 2: Total Real de Egresos */}
+          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col justify-between">
+            <span className="text-slate-400 text-xs flex items-center gap-1.5">
+              <TrendingDown size={14} className="text-rose-400" />
+              Total Egresos Reales
+            </span>
+            <div className="mt-2">
+              <p className="text-lg sm:text-xl font-black text-rose-400 font-mono">
+                {formatMoney(totals.totalRealExpenses)}
+              </p>
+              <span className="text-[10px] text-slate-400">
+                {transactions.filter(t => t.type === 'expense').length} gastos registrados en la app
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Total en Topes Fijados */}
           <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col justify-between">
             <span className="text-slate-400 text-xs flex items-center gap-1.5">
               <Sliders size={14} className="text-indigo-400" />
@@ -231,22 +301,6 @@ export const BudgetsView: React.FC = () => {
               </p>
               <span className="text-[10px] text-slate-400">
                 {budgets.length} {budgets.length === 1 ? 'categoría con límite' : 'categorías con límite'}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Gasto Real */}
-          <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 flex flex-col justify-between">
-            <span className="text-slate-400 text-xs flex items-center gap-1.5">
-              <TrendingDown size={14} className="text-rose-400" />
-              Gasto Real del Mes
-            </span>
-            <div className="mt-2">
-              <p className="text-lg sm:text-xl font-black text-rose-400 font-mono">
-                {formatMoney(totals.totalSpentInBudgets)}
-              </p>
-              <span className="text-[10px] text-slate-400">
-                {totals.overallPct.toFixed(0)}% del total presupuestado
               </span>
             </div>
           </div>
@@ -309,42 +363,47 @@ export const BudgetsView: React.FC = () => {
         </div>
       )}
 
-      {/* 3. LIST OF CATEGORY BUDGETS (START FROM 0) */}
-      {budgets.length === 0 ? (
+      {/* 3. UNIFIED LIST OF CATEGORIES (REAL SPENT + TOPES) */}
+      {unifiedCategories.length === 0 ? (
         <div className="p-12 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
           <BarChart3 size={36} className="mx-auto text-slate-600" />
-          <h3 className="text-base font-bold text-white">No tienes topes de gasto fijados</h3>
+          <h3 className="text-base font-bold text-white">No hay egresos ni topes registrados</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Comienza fijando límites mensuales para las categorías donde más gastas (ej: Supermercado, Salidas, Transporte) para mantener el control de tu dinero.
+            A medida que registres gastos o boletas en la app, aparecerán automáticamente aquí con su total real para que les asignes un tope con 1 clic.
           </p>
-          <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5"
-          >
-            <Plus size={15} />
-            <span>Fijar Mi Primer Tope de Gasto</span>
-          </button>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              onClick={() => openTransactionModal('expense')}
+              className="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+            >
+              <TrendingDown size={14} />
+              <span>Registrar Gasto</span>
+            </button>
+            <button
+              onClick={() => handleOpenAdd()}
+              className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 shadow-sm"
+            >
+              <Plus size={15} />
+              <span>Fijar Tope a una Categoría</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {budgets.map(b => {
-            const spent = spendingByCategory[b.category] || 0;
-            const limit = b.limitAmount || 0;
-            const pct = limit > 0 ? (spent / limit) * 100 : 0;
-            const remaining = limit - spent;
-            const threshold = b.warningThresholdPct ?? 80;
-            const isExceeded = spent > limit;
-            const isWarning = !isExceeded && pct >= threshold;
+          {unifiedCategories.map(item => {
+            const hasBudget = item.hasBudget;
 
             return (
               <div 
-                key={b.id}
+                key={item.category}
                 className={`p-5 rounded-3xl border transition-all flex flex-col justify-between space-y-4 ${
-                  isExceeded
+                  item.isExceeded
                     ? 'bg-rose-950/20 border-rose-500/50 shadow-glow-rose'
-                    : isWarning
+                    : item.isWarning
                     ? 'bg-amber-950/20 border-amber-500/50 shadow-glow-amber'
-                    : 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                    : hasBudget
+                    ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                    : 'bg-slate-900/50 border-slate-800/60 border-dashed'
                 }`}
               >
                 <div>
@@ -352,70 +411,108 @@ export const BudgetsView: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span 
                         className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: CATEGORY_COLORS[b.category] || '#10B981' }}
+                        style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#10B981' }}
                       />
-                      <h4 className="text-sm font-bold text-white truncate max-w-[200px]">{b.category}</h4>
+                      <div>
+                        <h4 className="text-sm font-bold text-white truncate max-w-[200px]">{item.category}</h4>
+                        {item.txCount > 0 && (
+                          <span className="text-[10px] text-slate-400">
+                            {item.txCount} {item.txCount === 1 ? 'gasto registrado' : 'gastos registrados'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenEdit(b)}
-                        className="p-1 text-slate-400 hover:text-white"
-                        title="Editar tope"
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`¿Eliminar el tope para "${b.category}"?`)) {
-                            deleteBudget(b.id);
-                          }
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-400"
-                        title="Eliminar tope"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {hasBudget && item.budget ? (
+                        <>
+                          <button
+                            onClick={() => handleOpenEdit(item.budget!)}
+                            className="p-1 text-slate-400 hover:text-white"
+                            title="Editar tope"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar el tope para "${item.category}"?`)) {
+                                deleteBudget(item.budget!.id);
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-rose-400"
+                            title="Eliminar tope"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenAdd(item.category, item.spent > 0 ? item.spent * 1.2 : 50000)}
+                          className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition-colors flex items-center gap-1"
+                          title="Fijar tope a esta categoría con egresos"
+                        >
+                          <Plus size={12} />
+                          <span>Fijar Tope</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {/* Amounts */}
                   <div className="flex justify-between items-baseline mt-3 text-xs">
                     <span className="text-slate-400">
-                      Gastado: <strong className={isExceeded ? 'text-rose-400 font-mono' : 'text-white font-mono'}>{formatMoney(spent)}</strong>
+                      Gasto Real: <strong className={item.isExceeded ? 'text-rose-400 font-mono' : 'text-white font-mono'}>{formatMoney(item.spent)}</strong>
                     </span>
                     <span className="text-slate-400">
-                      Tope: <strong className="text-emerald-400 font-mono">{formatMoney(limit)}</strong>
+                      Tope: {hasBudget ? (
+                        <strong className="text-emerald-400 font-mono">{formatMoney(item.limit)}</strong>
+                      ) : (
+                        <span className="text-slate-500 italic text-[11px]">Sin límite fijado</span>
+                      )}
                     </span>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden mt-2">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isExceeded 
-                          ? 'bg-rose-500' 
-                          : isWarning 
-                          ? 'bg-amber-500' 
-                          : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
+                  {/* Progress Bar (if budget is set) */}
+                  {hasBudget ? (
+                    <>
+                      <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden mt-2">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            item.isExceeded 
+                              ? 'bg-rose-500' 
+                              : item.isWarning 
+                              ? 'bg-amber-500' 
+                              : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(item.pct, 100)}%` }}
+                        />
+                      </div>
 
-                  {/* Status footer */}
-                  <div className="flex justify-between items-center text-[11px] mt-2">
-                    <span className={`font-bold ${isExceeded ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-slate-400'}`}>
-                      {pct.toFixed(0)}% consumido
-                    </span>
-                    <span className={`font-bold ${isExceeded ? 'text-rose-400' : 'text-emerald-400'}`}>
-                      {isExceeded ? `Excedido por ${formatMoney(Math.abs(remaining))}` : `Quedan ${formatMoney(remaining)}`}
-                    </span>
-                  </div>
+                      {/* Status footer */}
+                      <div className="flex justify-between items-center text-[11px] mt-2">
+                        <span className={`font-bold ${item.isExceeded ? 'text-rose-400' : item.isWarning ? 'text-amber-400' : 'text-slate-400'}`}>
+                          {item.pct.toFixed(0)}% consumido
+                        </span>
+                        <span className={`font-bold ${item.isExceeded ? 'text-rose-400' : 'text-emerald-400'}`}>
+                          {item.isExceeded ? `Excedido por ${formatMoney(Math.abs(item.remaining))}` : `Quedan ${formatMoney(item.remaining)}`}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/40 flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-slate-400">Esta categoría tiene egresos reales pero aún no tiene tope fijado.</span>
+                      <button
+                        onClick={() => handleOpenAdd(item.category, item.spent > 0 ? item.spent * 1.2 : 50000)}
+                        className="text-[11px] text-emerald-400 hover:underline font-bold whitespace-nowrap ml-2"
+                      >
+                        Asignar Tope
+                      </button>
+                    </div>
+                  )}
 
-                  {b.notes && (
+                  {item.notes && (
                     <p className="text-[11px] text-slate-400 italic mt-2">
-                      "{b.notes}"
+                      "{item.notes}"
                     </p>
                   )}
                 </div>
