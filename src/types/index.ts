@@ -125,12 +125,38 @@ export interface FinancialMetrics {
   runwayMonths: number;
 }
 
+export type AssetCategory = 'bank' | 'cash' | 'investment' | 'real_estate' | 'vehicle' | 'crypto' | 'other';
+
+export interface Asset {
+  id: string;
+  name: string;
+  category: AssetCategory;
+  value: number;
+  institution?: string;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  name: string;
+  amount: number;
+  billingCycle: 'monthly' | 'yearly';
+  renewalDay: number;
+  category: string;
+  icon?: string;
+  active: boolean;
+  notes?: string;
+}
+
 export type ActiveView = 
   | 'dashboard'
   | 'transactions'
   | 'budgets'
   | 'calendar'
   | 'debts'
+  | 'net_worth'
+  | 'subscriptions'
   | 'savings'
   | 'goals'
   | 'scenarios'

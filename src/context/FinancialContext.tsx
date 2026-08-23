@@ -9,7 +9,9 @@ import {
   SavingsTip, 
   CurrencyConfig, 
   FinancialMetrics, 
-  ActiveView 
+  ActiveView,
+  Asset,
+  Subscription
 } from '../types';
 import { 
   INITIAL_TRANSACTIONS, 
@@ -59,6 +61,38 @@ interface FinancialContextType {
   setIsSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  isPrivacyMode: boolean;
+  togglePrivacyMode: () => void;
+
+  // Pro Suite: Net Worth & Assets
+  assets: Asset[];
+  addAsset: (asset: Omit<Asset, 'id'>) => void;
+  updateAsset: (id: string, asset: Partial<Asset>) => void;
+  deleteAsset: (id: string) => void;
+  isAssetModalOpen: boolean;
+  setIsAssetModalOpen: (open: boolean) => void;
+  editingAsset: Asset | null;
+  openAssetModal: (asset?: Asset) => void;
+  closeAssetModal: () => void;
+
+  // Pro Suite: Subscriptions Radar
+  subscriptions: Subscription[];
+  addSubscription: (sub: Omit<Subscription, 'id'>) => void;
+  updateSubscription: (id: string, sub: Partial<Subscription>) => void;
+  deleteSubscription: (id: string) => void;
+  toggleSubscription: (id: string) => void;
+
+  // Pro Suite: Command Palette & Modals
+  isCommandPaletteOpen: boolean;
+  setIsCommandPaletteOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  isCSVImporterOpen: boolean;
+  setIsCSVImporterOpen: (open: boolean) => void;
+  isReportPrintModalOpen: boolean;
+  setIsReportPrintModalOpen: (open: boolean) => void;
+
+  // Pro Suite: Security PIN
+  userPIN: string | null;
+  setUserPIN: (pin: string | null) => void;
   
   // User Profile & Personalized Greeting
   userName: string;
@@ -631,9 +665,158 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Custom Amount Formatter
+  // Pro Suite: Stealth Privacy Mode
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
+    return localStorage.getItem('gastfin_privacy_v1') === 'true';
+  });
+
+  const togglePrivacyMode = () => {
+    setIsPrivacyMode(prev => {
+      const next = !prev;
+      localStorage.setItem('gastfin_privacy_v1', String(next));
+      return next;
+    });
+  };
+
+  // Pro Suite: Net Worth & Assets
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    try {
+      const stored = localStorage.getItem('gastfin_assets_v1');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_assets_v1', JSON.stringify(assets));
+  }, [assets]);
+
+  const addAsset = (asset: Omit<Asset, 'id'>) => {
+    const newAsset: Asset = { ...asset, id: `asset-${Date.now()}` };
+    setAssets(prev => [newAsset, ...prev]);
+    triggerCelebration();
+  };
+
+  const updateAsset = (id: string, updates: Partial<Asset>) => {
+    setAssets(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+  };
+
+  const deleteAsset = (id: string) => {
+    setAssets(prev => prev.filter(a => a.id !== id));
+  };
+
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+
+  const openAssetModal = (asset?: Asset) => {
+    setEditingAsset(asset || null);
+    setIsAssetModalOpen(true);
+  };
+
+  const closeAssetModal = () => {
+    setEditingAsset(null);
+    setIsAssetModalOpen(false);
+  };
+
+  // Pro Suite: Subscriptions Radar
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
+    try {
+      const stored = localStorage.getItem('gastfin_subscriptions_v1');
+      return stored ? JSON.parse(stored) : [
+        {
+          id: 'sub-netflix',
+          name: 'Netflix Premium 4K',
+          amount: 11990,
+          billingCycle: 'monthly',
+          renewalDay: 15,
+          category: 'Streaming & Ocio',
+          active: true
+        },
+        {
+          id: 'sub-spotify',
+          name: 'Spotify Familiar',
+          amount: 6490,
+          billingCycle: 'monthly',
+          renewalDay: 5,
+          category: 'Streaming & Ocio',
+          active: true
+        }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_subscriptions_v1', JSON.stringify(subscriptions));
+  }, [subscriptions]);
+
+  const addSubscription = (sub: Omit<Subscription, 'id'>) => {
+    const newSub: Subscription = { ...sub, id: `sub-${Date.now()}` };
+    setSubscriptions(prev => [newSub, ...prev]);
+  };
+
+  const updateSubscription = (id: string, updates: Partial<Subscription>) => {
+    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const deleteSubscription = (id: string) => {
+    setSubscriptions(prev => prev.filter(s => s.id !== id));
+  };
+
+  const toggleSubscription = (id: string) => {
+    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  };
+
+  // Pro Suite: Command Palette & Modals
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isCSVImporterOpen, setIsCSVImporterOpen] = useState(false);
+  const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
+
+  // Pro Suite: Security PIN
+  const [userPIN, setUserPINState] = useState<string | null>(() => {
+    return localStorage.getItem('gastfin_user_pin_v1');
+  });
+
+  const setUserPIN = (pin: string | null) => {
+    setUserPINState(pin);
+    if (pin) {
+      localStorage.setItem('gastfin_user_pin_v1', pin);
+    } else {
+      localStorage.removeItem('gastfin_user_pin_v1');
+    }
+  };
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K -> Command Palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+      // Shift+P -> Privacy mode toggle
+      if (e.shiftKey && e.key.toUpperCase() === 'P') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        togglePrivacyMode();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Custom Amount Formatter with Stealth Privacy Mask
   const formatMoney = (amount: number | undefined | null, overrideSymbol?: string) => {
     const symbol = overrideSymbol !== undefined ? overrideSymbol : (currentCurrency?.symbol || '$');
+    if (isPrivacyMode) {
+      return `${symbol} ••••••`;
+    }
     const safeAmount = (amount === undefined || amount === null || isNaN(Number(amount))) ? 0 : Number(amount);
     const isNegative = safeAmount < 0;
     const absVal = Math.abs(safeAmount);
@@ -1323,6 +1506,30 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isSessionLocked,
         unlockSession,
         logoutUser,
+        isPrivacyMode,
+        togglePrivacyMode,
+        assets,
+        addAsset,
+        updateAsset,
+        deleteAsset,
+        isAssetModalOpen,
+        setIsAssetModalOpen,
+        editingAsset,
+        openAssetModal,
+        closeAssetModal,
+        subscriptions,
+        addSubscription,
+        updateSubscription,
+        deleteSubscription,
+        toggleSubscription,
+        isCommandPaletteOpen,
+        setIsCommandPaletteOpen,
+        isCSVImporterOpen,
+        setIsCSVImporterOpen,
+        isReportPrintModalOpen,
+        setIsReportPrintModalOpen,
+        userPIN,
+        setUserPIN,
         clearAllDataToZero,
         resetToDemoData,
         exportDataAsJSON,

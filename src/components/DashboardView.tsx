@@ -54,8 +54,46 @@ export const DashboardView: React.FC = () => {
     openTransactionModal, 
     openDebtModal, 
     openGoalModal,
-    setActiveView 
+    setActiveView,
+    assets,
+    subscriptions
   } = useFinancial();
+
+  // 50 / 30 / 20 Rule Automatic Calculation
+  const rule503020 = useMemo(() => {
+    const totalInc = metrics.totalIncome || 0;
+    let needs = 0;
+    let wants = 0;
+
+    transactions.filter(t => t.type === 'expense').forEach(t => {
+      const cat = t.category.toLowerCase();
+      if (cat.includes('arriendo') || cat.includes('super') || cat.includes('luz') || cat.includes('agua') || cat.includes('gas') || cat.includes('transporte') || cat.includes('salud') || cat.includes('farmacia') || cat.includes('servicios')) {
+        needs += t.amount;
+      } else {
+        wants += t.amount;
+      }
+    });
+
+    const savings = Math.max(0, metrics.netCashFlow);
+    const totalExp = metrics.totalExpense || 1;
+
+    return {
+      needs,
+      wants,
+      savings,
+      needsPct: totalInc > 0 ? (needs / totalInc) * 100 : (needs / totalExp) * 100,
+      wantsPct: totalInc > 0 ? (wants / totalInc) * 100 : (wants / totalExp) * 100,
+      savingsPct: totalInc > 0 ? (savings / totalInc) * 100 : 0
+    };
+  }, [transactions, metrics]);
+
+  // Net Worth & Subscriptions totals
+  const totalAssets = useMemo(() => assets.reduce((acc, a) => acc + a.value, 0), [assets]);
+  const totalLiabilities = useMemo(() => debts.reduce((acc, d) => acc + d.remainingAmount, 0), [debts]);
+  const netWorth = totalAssets - totalLiabilities;
+  const activeSubsMonthly = useMemo(() => {
+    return subscriptions.filter(s => s.active).reduce((acc, s) => acc + (s.billingCycle === 'monthly' ? s.amount : s.amount / 12), 0);
+  }, [subscriptions]);
 
   // Monthly Cash Flow Chart Data
   const monthlyData = useMemo(() => {
@@ -642,6 +680,80 @@ export const DashboardView: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Pro Suite: 50 / 30 / 20 Rule Smart Assistant Widget */}
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Regla 50 / 30 / 20</h3>
+                  <span className="text-[10px] text-slate-400">Salud Financiera Pro</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {/* Needs 50% */}
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300 font-semibold">50% Necesidades (Hogar/Comida)</span>
+                  <span className="font-mono font-bold text-white">{rule503020.needsPct.toFixed(0)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, rule503020.needsPct)}%` }} />
+                </div>
+              </div>
+
+              {/* Wants 30% */}
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300 font-semibold">30% Deseos & Estilo de Vida</span>
+                  <span className="font-mono font-bold text-white">{rule503020.wantsPct.toFixed(0)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${Math.min(100, rule503020.wantsPct)}%` }} />
+                </div>
+              </div>
+
+              {/* Savings 20% */}
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-300 font-semibold">20% Ahorro & Libertad</span>
+                  <span className="font-mono font-bold text-white">{rule503020.savingsPct.toFixed(0)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full transition-all" style={{ width: `${Math.min(100, rule503020.savingsPct)}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pro Suite: Net Worth & Subscriptions Mini Card */}
+          <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 shadow-card-soft space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} className="text-emerald-400" />
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Patrimonio Neto Real</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveView('net_worth')}
+                className="text-xs text-emerald-400 hover:text-emerald-300 font-bold"
+              >
+                Ver Todo →
+              </button>
+            </div>
+            <p className={`text-xl font-black ${netWorth >= 0 ? 'text-white' : 'text-rose-400'}`}>
+              {formatMoney(netWorth)}
+            </p>
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+              <span>Activos: {formatMoney(totalAssets)}</span>
+              <span>Pasivos: {formatMoney(totalLiabilities)}</span>
+            </div>
           </div>
 
         </div>

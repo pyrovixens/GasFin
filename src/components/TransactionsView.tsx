@@ -7,15 +7,16 @@ import {
   Trash2, 
   Edit3, 
   Calendar, 
-  Tag,
-  CreditCard,
-  Printer,
-  FileSpreadsheet,
-  Clock,
-  Plus,
-  Inbox,
-  ShieldCheck,
-  RotateCcw
+  Tag, 
+  CreditCard, 
+  Printer, 
+  FileSpreadsheet, 
+  Clock, 
+  Plus, 
+  Inbox, 
+  ShieldCheck, 
+  RotateCcw,
+  Upload
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Transaction, TransactionType } from '../types';
@@ -26,7 +27,8 @@ export const TransactionsView: React.FC = () => {
     formatMoney, 
     deleteTransaction, 
     openTransactionModal,
-    exportDataToExcel 
+    exportDataToExcel,
+    setIsCSVImporterOpen
   } = useFinancial();
 
   // Helper for bank-style date and time formatting
@@ -124,8 +126,19 @@ export const TransactionsView: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              type="button"
+              onClick={() => setIsCSVImporterOpen(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Importar archivo CSV de movimientos bancarios"
+            >
+              <Upload size={16} className="text-sky-400" />
+              <span>Importar Cartola CSV</span>
+            </button>
+
+            <button
+              type="button"
               onClick={exportDataToExcel}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Descargar Libro Completo en Excel"
             >
               <FileSpreadsheet size={16} />
@@ -133,8 +146,9 @@ export const TransactionsView: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => window.print()}
-              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
               title="Imprimir cartola"
             >
               <Printer size={16} className="text-slate-400" />
@@ -142,8 +156,9 @@ export const TransactionsView: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => openTransactionModal('income')}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black shadow-glow-emerald transition-all flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-black shadow-glow-emerald transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>+ Nuevo Movimiento</span>
             </button>

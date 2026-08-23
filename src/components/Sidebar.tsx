@@ -76,6 +76,20 @@ export const Sidebar: React.FC = () => {
       badgeColor: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     },
     {
+      id: 'net_worth' as ActiveView,
+      label: 'Patrimonio Neto',
+      icon: TrendingUp,
+      badge: 'Riqueza',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+    },
+    {
+      id: 'subscriptions' as ActiveView,
+      label: 'Suscripciones',
+      icon: Clock,
+      badge: 'Radar',
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+    },
+    {
       id: 'savings' as ActiveView,
       label: 'Consejos de Ahorro',
       icon: Lightbulb,

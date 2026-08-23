@@ -10,7 +10,11 @@ import {
   Scan, 
   Cloud, 
   User,
-  LogOut
+  LogOut,
+  Eye,
+  EyeOff,
+  Search,
+  Command
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
@@ -19,6 +23,9 @@ export const Navbar: React.FC = () => {
     activeView, 
     isDarkMode, 
     toggleDarkMode, 
+    isPrivacyMode,
+    togglePrivacyMode,
+    setIsCommandPaletteOpen,
     openTransactionModal,
     setIsReceiptScannerOpen,
     setIsSidebarCollapsed,
@@ -41,12 +48,14 @@ export const Navbar: React.FC = () => {
       case 'budgets': return { title: 'Control de Presupuestos Mensuales', subtitle: 'Límites de gasto por categoría y alertas de sobregiro' };
       case 'calendar': return { title: 'Calendario Financiero & Vencimientos', subtitle: 'Planificación de pagos de sueldos, servicios y deudas' };
       case 'debts': return { title: 'Optimizador y Calculadora de Deudas', subtitle: 'Estrategias Bola de Nieve vs Avalancha y amortizaciones' };
+      case 'net_worth': return { title: 'Monitor de Patrimonio Neto', subtitle: 'Balance consolidado de Activos y Pasivos' };
+      case 'subscriptions': return { title: 'Radar de Suscripciones & Cobros Recurrentes', subtitle: 'Auditoría de cobros mensuales y costo anualizado' };
       case 'savings': return { title: 'Asesor Inteligente de Ahorro', subtitle: 'Detección de fugas de dinero y distribución 50/30/20' };
       case 'goals': return { title: 'Metas y Fondos Financieros', subtitle: 'Planificación de reservas, ahorro e inversiones' };
       case 'scenarios': return { title: 'Simulador Financiero What-If', subtitle: 'Proyecciones estratégicas basadas en tu sueldo' };
       case 'compound': return { title: 'Libertad Financiera & Interés Compuesto', subtitle: 'Simulación de crecimiento exponencial y regla FIRE' };
       case 'reports': return { title: 'Reportes Financieros & Balances PDF', subtitle: 'Estados ejecutivos oficiales imprimibles y descargables' };
-      case 'settings': return { title: 'Configuración & Respaldos', subtitle: 'Preferencias de divisa fija, backups y control' };
+      case 'settings': return { title: 'Configuración & Seguridad', subtitle: 'Preferencias de PIN, moneda y respaldos' };
       default: return { title: 'GastFin', subtitle: 'Control de Costos' };
     }
   };
@@ -131,14 +140,30 @@ export const Navbar: React.FC = () => {
           <span>{currentCurrency.code}</span>
         </button>
 
-        {/* Export to Excel Quick Button */}
+        {/* Command Palette Quick Search Button (Cmd+K) */}
         <button
-          onClick={exportDataToExcel}
-          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs transition-all shadow-sm"
-          title="Exportar base de datos a Excel"
+          type="button"
+          onClick={() => setIsCommandPaletteOpen(true)}
+          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+          title="Abrir paleta de comandos rápida (Cmd + K / Ctrl + K)"
         >
-          <FileSpreadsheet size={15} />
-          <span className="hidden sm:inline">Excel</span>
+          <Search size={14} className="text-emerald-400" />
+          <span className="hidden xl:inline text-slate-400">Buscar</span>
+          <kbd className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 font-mono text-[9px] border border-slate-700">⌘K</kbd>
+        </button>
+
+        {/* Privacy Stealth Mode Toggle (Ocultar Saldos) */}
+        <button
+          type="button"
+          onClick={togglePrivacyMode}
+          title={isPrivacyMode ? 'Desactivar modo privacidad (mostrar saldos)' : 'Activar modo privacidad (ocultar saldos con asteriscos)'}
+          className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            isPrivacyMode 
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-glow-amber' 
+              : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700/60'
+          }`}
+        >
+          {isPrivacyMode ? <EyeOff size={16} className="text-amber-400" /> : <Eye size={16} className="text-slate-400" />}
         </button>
 
         {/* Dark / Light Mode Toggle */}

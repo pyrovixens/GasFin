@@ -24,6 +24,13 @@ import { AuthModal } from './components/AuthModal';
 import { SessionLockModal } from './components/SessionLockModal';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 
+import { NetWorthView } from './components/NetWorthView';
+import { SubscriptionsManagerView } from './components/SubscriptionsManagerView';
+import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { BankStatementImporterModal } from './components/BankStatementImporterModal';
+import { AssetModal } from './components/AssetModal';
+import { FinancialReportPrintModal } from './components/FinancialReportPrintModal';
+
 export const AppContent: React.FC = () => {
   const { activeView } = useFinancial();
 
@@ -39,6 +46,10 @@ export const AppContent: React.FC = () => {
         return <CalendarView />;
       case 'debts':
         return <DebtCalculatorView />;
+      case 'net_worth':
+        return <NetWorthView />;
+      case 'subscriptions':
+        return <SubscriptionsManagerView />;
       case 'savings':
         return <SavingsAdvisorView />;
       case 'goals':
@@ -78,7 +89,7 @@ export const AppContent: React.FC = () => {
       {/* Floating Scroll To Top Button */}
       <ScrollToTopButton />
 
-      {/* Modals & Dialogs */}
+      {/* Core Modals & Dialogs */}
       <TransactionModal />
       <ReceiptScannerModal />
       <DebtModal />
@@ -86,6 +97,12 @@ export const AppContent: React.FC = () => {
       <DeficitAlertModal />
       <CurrencySetupModal />
       <AuthModal />
+
+      {/* Pro Suite Modals */}
+      <CommandPaletteModal />
+      <BankStatementImporterModal />
+      <AssetModal />
+      <FinancialReportPrintModal />
 
       {/* Banking-grade Inactivity Security Overlay */}
       <SessionLockModal />

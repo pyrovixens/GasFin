@@ -17,7 +17,11 @@ import {
   Moon,
   LogOut,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  KeyRound,
+  FileText
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../data/initialData';
@@ -41,6 +45,11 @@ export const SettingsView: React.FC = () => {
     logoutUser,
     isDarkMode,
     toggleDarkMode,
+    isPrivacyMode,
+    togglePrivacyMode,
+    setIsReportPrintModalOpen,
+    userPIN,
+    setUserPIN,
     transactions, 
     debts, 
     goals, 
@@ -52,6 +61,8 @@ export const SettingsView: React.FC = () => {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [tempName, setTempName] = useState(userName);
   const [nameSavedStatus, setNameSavedStatus] = useState(false);
+  const [pinInput, setPinInput] = useState(userPIN || '');
+  const [pinSavedStatus, setPinSavedStatus] = useState(false);
   const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -161,6 +172,92 @@ export const SettingsView: React.FC = () => {
             )}
           </button>
         </div>
+      </div>
+
+      {/* Privacy Stealth Mode Card */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              {isPrivacyMode ? <EyeOff size={18} className="text-amber-400" /> : <Eye size={18} className="text-slate-400" />}
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Modo Privacidad (Ocultar Saldos)</h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              {isPrivacyMode ? 'Todos los montos están ocultos con asteriscos ($ ••••••).' : 'Los montos y cifras se muestran visibles.'}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={togglePrivacyMode}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
+              isPrivacyMode 
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-glow-amber' 
+                : 'bg-slate-800 hover:bg-slate-700 text-white border-slate-700'
+            }`}
+          >
+            {isPrivacyMode ? <Eye size={16} /> : <EyeOff size={16} />}
+            <span>{isPrivacyMode ? 'Mostrar Saldos' : 'Ocultar Saldos'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick 4-Digit Security PIN Card */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+        <div className="flex items-center gap-2">
+          <KeyRound size={18} className="text-emerald-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">PIN Rápido de Desbloqueo (4 Dígitos)</h3>
+        </div>
+        <p className="text-xs text-slate-400">
+          Configura un código PIN numérico para desbloquear tu sesión en móvil y tablet rápidamente.
+        </p>
+
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (pinInput.length === 4) {
+            setUserPIN(pinInput);
+            setPinSavedStatus(true);
+            setTimeout(() => setPinSavedStatus(false), 3000);
+          }
+        }} className="flex flex-col sm:flex-row items-center gap-3">
+          <input
+            type="password"
+            maxLength={4}
+            pattern="\d{4}"
+            inputMode="numeric"
+            placeholder="PIN (4 dígitos)"
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+            className="w-full sm:w-48 px-4 py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-white font-mono font-black text-center text-lg tracking-widest focus:outline-none focus:border-emerald-500"
+          />
+
+          <button
+            type="submit"
+            disabled={pinInput.length !== 4}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all cursor-pointer disabled:opacity-50"
+          >
+            Guardar PIN
+          </button>
+
+          {userPIN && (
+            <button
+              type="button"
+              onClick={() => {
+                setUserPIN(null);
+                setPinInput('');
+              }}
+              className="text-xs text-rose-400 hover:underline cursor-pointer"
+            >
+              Quitar PIN
+            </button>
+          )}
+
+          {pinSavedStatus && (
+            <span className="text-xs text-emerald-400 font-semibold animate-fade-in">
+              ✓ ¡PIN guardado exitosamente!
+            </span>
+          )}
+        </form>
       </div>
 
       {/* Cloud & Session Security Card */}
