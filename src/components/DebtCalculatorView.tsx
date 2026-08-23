@@ -193,7 +193,7 @@ export const DebtCalculatorView: React.FC = () => {
               title="Enlazar con informe oficial de CMF Chile"
             >
               <Building2 size={15} />
-              <span>Enlace CMF Chile</span>
+              <span>Compilador CMF Chile</span>
             </button>
 
             <button
@@ -205,6 +205,35 @@ export const DebtCalculatorView: React.FC = () => {
               <span>+ Registrar Deuda</span>
             </button>
           </div>
+        </div>
+
+        {/* CMF Chile Destácame-Style Live Compiler Banner */}
+        <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-sky-950/40 via-slate-800/60 to-blue-950/40 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+              <Building2 size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  CMF Chile • Open Finance
+                </span>
+                <span className="text-[10px] text-emerald-400 font-bold">● Sincronización Automática</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Extrae y compila automáticamente tus deudas de bancos y tarjetas con tu ClaveÚnica.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsCMFModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
+          >
+            <RefreshCw size={14} />
+            <span>Sincronizar con ClaveÚnica</span>
+          </button>
         </div>
 
         {/* Global Debt Summary Metrics */}
