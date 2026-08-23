@@ -19,8 +19,7 @@ import {
   RefreshCw,
   Lightbulb,
   Copy,
-  Check,
-  Building2
+  Check
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Debt } from '../types';
@@ -37,8 +36,7 @@ export const DebtCalculatorView: React.FC = () => {
     metrics,
     currentCurrency,
     addDebt,
-    triggerCelebration,
-    setIsCMFModalOpen
+    triggerCelebration
   } = useFinancial();
 
   // Selected Strategy: 'avalanche' (High APR first) vs 'snowball' (Lowest balance first)
@@ -185,54 +183,13 @@ export const DebtCalculatorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <button
-              type="button"
-              onClick={() => setIsCMFModalOpen(true)}
-              className="px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-              title="Enlazar con informe oficial de CMF Chile"
-            >
-              <Building2 size={15} />
-              <span>Compilador CMF Chile</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => openDebtModal()}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-glow-amber transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Plus size={16} strokeWidth={2.5} />
-              <span>+ Registrar Deuda</span>
-            </button>
-          </div>
-        </div>
-
-        {/* CMF Chile Destácame-Style Live Compiler Banner */}
-        <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-sky-950/40 via-slate-800/60 to-blue-950/40 border border-sky-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
-              <Building2 size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                  CMF Chile • Open Finance
-                </span>
-                <span className="text-[10px] text-emerald-400 font-bold">● Sincronización Automática</span>
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Extrae y compila automáticamente tus deudas de bancos y tarjetas con tu ClaveÚnica.
-              </p>
-            </div>
-          </div>
-
           <button
             type="button"
-            onClick={() => setIsCMFModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
+            onClick={() => openDebtModal()}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-glow-amber transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <RefreshCw size={14} />
-            <span>Sincronizar con ClaveÚnica</span>
+            <Plus size={16} strokeWidth={2.5} />
+            <span>+ Registrar Deuda</span>
           </button>
         </div>
 

@@ -139,10 +139,6 @@ interface FinancialContextType {
   isDeficitModalOpen: boolean;
   setIsDeficitModalOpen: (open: boolean) => void;
 
-  // CMF Chile 'Conoce tu Deuda' Modal
-  isCMFModalOpen: boolean;
-  setIsCMFModalOpen: (open: boolean) => void;
-
   // Session Security & Inactivity Locking
   isSessionLocked: boolean;
   unlockSession: () => void;
@@ -541,9 +537,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
-  // CMF Chile Modal State
-  const [isCMFModalOpen, setIsCMFModalOpen] = useState(false);
-
   // Banking Session Security: Inactivity Tracker (15 minutes)
   const [isSessionLocked, setIsSessionLocked] = useState(false);
 
@@ -584,6 +577,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     setIsSessionLocked(false);
     setActiveView('dashboard');
+    setIsAuthModalOpen(true);
   };
 
   useEffect(() => {
@@ -1326,8 +1320,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         openGoalModal,
         closeGoalModal,
         editingGoal,
-        isCMFModalOpen,
-        setIsCMFModalOpen,
         isSessionLocked,
         unlockSession,
         logoutUser,

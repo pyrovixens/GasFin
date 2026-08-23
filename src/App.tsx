@@ -21,7 +21,6 @@ import { GoalModal } from './components/GoalModal';
 import { DeficitAlertModal } from './components/DeficitAlertModal';
 import { CurrencySetupModal } from './components/CurrencySetupModal';
 import { AuthModal } from './components/AuthModal';
-import { CMFDebtSyncModal } from './components/CMFDebtSyncModal';
 import { SessionLockModal } from './components/SessionLockModal';
 import { ScrollToTopButton } from './components/ScrollToTopButton';
 
@@ -87,7 +86,6 @@ export const AppContent: React.FC = () => {
       <DeficitAlertModal />
       <CurrencySetupModal />
       <AuthModal />
-      <CMFDebtSyncModal />
 
       {/* Banking-grade Inactivity Security Overlay */}
       <SessionLockModal />

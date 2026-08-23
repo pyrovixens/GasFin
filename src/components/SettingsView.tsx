@@ -16,7 +16,6 @@ import {
   Sun,
   Moon,
   LogOut,
-  Building2,
   ShieldCheck,
   AlertTriangle
 } from 'lucide-react';
@@ -42,7 +41,6 @@ export const SettingsView: React.FC = () => {
     logoutUser,
     isDarkMode,
     toggleDarkMode,
-    setIsCMFModalOpen,
     transactions, 
     debts, 
     goals, 
@@ -95,7 +93,7 @@ export const SettingsView: React.FC = () => {
           <div>
             <h2 className="text-xl font-extrabold text-white">Configuración del Sistema & Seguridad</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Administra tu perfil, tema visual, enlaces bancarios CMF y copias de seguridad.
+              Administra tu perfil, tema visual, seguridad y copias de seguridad.
             </p>
           </div>
         </div>
@@ -161,30 +159,6 @@ export const SettingsView: React.FC = () => {
                 <span>Cambiar a Modo Oscuro</span>
               </>
             )}
-          </button>
-        </div>
-      </div>
-
-      {/* CMF Chile Integration Card */}
-      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Building2 size={18} className="text-sky-400" />
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">CMF Chile — Conoce Tu Deuda</h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Enlaza tu informe oficial de la CMF (Comisión para el Mercado Financiero) con ClaveÚnica.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsCMFModalOpen(true)}
-            className="px-4 py-2.5 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-          >
-            <Building2 size={16} />
-            <span>Abrir Asistente CMF</span>
           </button>
         </div>
       </div>
