@@ -136,7 +136,7 @@ export const DeficitAlertModal: React.FC = () => {
             }}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2"
           >
-            <span>Ir al Asesor de Ahorros IA</span>
+            <span>Ir a Consejos de Ahorro</span>
             <ArrowRight size={15} />
           </button>
         </div>

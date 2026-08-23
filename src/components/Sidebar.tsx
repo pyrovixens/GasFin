@@ -169,7 +169,7 @@ export const Sidebar: React.FC = () => {
                     PRO
                   </span>
                 </div>
-                <span className="text-xs text-slate-400 truncate">Control Financiero Inteligente</span>
+                <span className="text-xs text-slate-400 truncate">Control de Gastos & Finanzas</span>
               </div>
             )}
           </div>
@@ -261,7 +261,7 @@ export const Sidebar: React.FC = () => {
               </div>
               <p className="text-xs text-slate-300 mb-2.5">
                 {metrics.isDeficit 
-                  ? 'Prioriza reducir costos no esenciales en el Asesor IA.'
+                  ? 'Prioriza reducir costos no esenciales en Consejos de Ahorro.'
                   : `Tasa de ahorro saludable: ${metrics.savingsRate.toFixed(1)}% este mes.`}
               </p>
               <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">

@@ -87,7 +87,7 @@ export const ReceiptScannerModal: React.FC = () => {
               setScanProgress(Math.round(m.progress * 100));
               setProgressStatus(`Leyendo caracteres y montos (${Math.round(m.progress * 100)}%)...`);
             } else if (m.status === 'loading tesseract core') {
-              setProgressStatus('Iniciando inteligencia visual...');
+              setProgressStatus('Iniciando lector óptico del comprobante...');
             }
           }
         }
@@ -139,7 +139,7 @@ export const ReceiptScannerModal: React.FC = () => {
       paymentMethod: 'card',
       status: 'completed',
       isRecurring: false,
-      tags: ['Boleta OCR Real'],
+      tags: ['Boleta Escaneada'],
       vendorOrClient: scanResult.vendor
     });
 
@@ -166,69 +166,38 @@ export const ReceiptScannerModal: React.FC = () => {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
             <Scan size={14} className="text-emerald-400" />
-            <span>Escáner OCR Real</span>
+            <span>Escáner de Boletas</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Escaneo de Boleta o Factura
+            Escanear Boleta o Factura
           </h2>
 
           <p className="text-xs text-slate-400">
-            Sube o toma una foto y nuestro lector OCR procesará el texto real de tu comprobante.
+            Sube o toma una foto y el lector óptico extraerá automáticamente el comercio, fecha y total.
           </p>
         </div>
 
         {/* Upload / Camera Drop Zone */}
         {!imagePreview ? (
-          <div className="space-y-3">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all bg-slate-800/30 hover:bg-slate-800/60 space-y-3 group"
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-              <input
-                type="file"
-                ref={cameraInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-              />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-3xl p-8 sm:p-10 text-center cursor-pointer transition-all bg-slate-800/30 hover:bg-slate-800/60 space-y-3 group"
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
 
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow-emerald">
-                <Upload size={28} />
-              </div>
-              <div className="space-y-1">
-                <p className="font-bold text-sm text-white">Haz clic para subir una foto de tu boleta</p>
-                <p className="text-xs text-slate-400">Soporta JPG, PNG, WEBP o capturas de pantalla</p>
-              </div>
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow-emerald">
+              <Upload size={28} />
             </div>
-
-            {/* Direct Camera Button (Mobile & Tablet) */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="py-2.5 px-3 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-              >
-                <Camera size={16} />
-                <span>Tomar Foto</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="py-2.5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
-              >
-                <Upload size={16} />
-                <span>Elegir Archivo</span>
-              </button>
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-white">Haz clic o arrastra aquí tu boleta o foto</p>
+              <p className="text-xs text-slate-400">Soporta fotos de cámara, JPG, PNG, WEBP o capturas</p>
             </div>
           </div>
         ) : (

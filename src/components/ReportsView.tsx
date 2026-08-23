@@ -280,7 +280,7 @@ export const ReportsView: React.FC = () => {
         {/* Official Report Footer */}
         <div className="pt-6 border-t border-slate-800 print:border-slate-400 text-center text-slate-500 print:text-slate-600 text-[11px] space-y-1">
           <p>Documento generado automáticamente por GastFin Pro. Los cálculos corresponden a los registros contables ingresados por el titular.</p>
-          <p>© {new Date().getFullYear()} GastFin Pro • Sistema de Control Financiero Inteligente</p>
+          <p>© {new Date().getFullYear()} GastFin Pro • Sistema de Control Financiero</p>
         </div>
 
       </div>

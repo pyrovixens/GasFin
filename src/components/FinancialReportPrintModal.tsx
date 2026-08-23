@@ -172,7 +172,7 @@ export const FinancialReportPrintModal: React.FC = () => {
 
           {/* Footer certification */}
           <div className="pt-6 border-t border-slate-800 print:border-black/20 text-center text-[10px] text-slate-400 print:text-black/50 space-y-1">
-            <p>Generado automáticamente por el motor de inteligencia financiera de GastFin Pro.</p>
+            <p>Generado automáticamente por el motor de gestión financiera de GastFin Pro.</p>
             <p>Documento de control personal y empresarial confidencial.</p>
           </div>
 

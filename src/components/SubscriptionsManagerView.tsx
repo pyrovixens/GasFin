@@ -163,7 +163,7 @@ export const SubscriptionsManagerView: React.FC = () => {
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-500/30 space-y-1">
             <span className="text-xs text-emerald-300 font-bold flex items-center gap-1.5">
               <Sparkles size={14} className="text-emerald-400" />
-              <span>Oportunidad de Ahorro IA</span>
+              <span>Oportunidad de Ahorro Estimada</span>
             </span>
             <p className="text-2xl font-black text-emerald-400">
               {formatMoney(yearlyTotal * 0.25)}

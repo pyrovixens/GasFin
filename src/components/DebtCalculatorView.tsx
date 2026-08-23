@@ -173,7 +173,7 @@ export const DebtCalculatorView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-extrabold text-white">Optimizador & Estrategia de Deudas</h2>
                   <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    Motor Dinámico IA
+                    Optimizador de Amortización
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
