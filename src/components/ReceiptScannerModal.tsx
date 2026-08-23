@@ -12,8 +12,12 @@ import {
   Building2, 
   ArrowRight,
   AlertCircle,
-  Camera
+  Camera,
+  Eye,
+  RefreshCw,
+  Layers
 } from 'lucide-react';
+import Tesseract from 'tesseract.js';
 import { useFinancial } from '../context/FinancialContext';
 
 export const ReceiptScannerModal: React.FC = () => {
@@ -24,11 +28,17 @@ export const ReceiptScannerModal: React.FC = () => {
     formatMoney, 
     formatInputLive,
     parseRawFromDisplay,
-    currentCurrency 
+    currentCurrency,
+    triggerCelebration
   } = useFinancial();
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState('Iniciando lector OCR...');
+  const [extractedRawText, setExtractedRawText] = useState<string>('');
+  const [showRawText, setShowRawText] = useState(false);
+
   const [scanResult, setScanResult] = useState<{
     vendor: string;
     amount: number;
@@ -39,73 +49,263 @@ export const ReceiptScannerModal: React.FC = () => {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   if (!isReceiptScannerOpen) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setImagePreview(result);
-      simulateIntelligentOCR(file.name);
+      const dataUrl = event.target?.result as string;
+      setImagePreview(dataUrl);
+      processRealOCR(dataUrl);
     };
     reader.readAsDataURL(file);
   };
 
-  // OCR Pattern Parser
-  const simulateIntelligentOCR = (fileName: string) => {
+  // Real Tesseract OCR Processing Engine
+  const processRealOCR = async (imageSrc: string) => {
     setIsScanning(true);
+    setScanProgress(0);
+    setProgressStatus('Cargando motor de reconocimiento OCR...');
     setScanResult(null);
+    setExtractedRawText('');
 
-    setTimeout(() => {
-      // Intelligent Merchant and Category matcher based on patterns
-      const lowerName = fileName.toLowerCase();
-      let vendor = 'Supermercado Lider';
-      let category = 'Alimentación & Supermercado';
-      let amount = 18990;
+    try {
+      const result = await Tesseract.recognize(
+        imageSrc,
+        'spa+eng', // Spanish & English recognition for receipts
+        {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setScanProgress(Math.round(m.progress * 100));
+              setProgressStatus(`Leyendo caracteres y montos (${Math.round(m.progress * 100)}%)...`);
+            } else if (m.status === 'loading tesseract core') {
+              setProgressStatus('Iniciando inteligencia visual...');
+            }
+          }
+        }
+      );
 
-      if (lowerName.includes('uber') || lowerName.includes('taxi')) {
-        vendor = 'Uber Technologies';
-        category = 'Transporte & Movilidad';
-        amount = 8500;
-      } else if (lowerName.includes('amazon') || lowerName.includes('compra')) {
-        vendor = 'Amazon Marketplace';
-        category = 'Compras & Personales';
-        amount = 34990;
-      } else if (lowerName.includes('luz') || lowerName.includes('enel') || lowerName.includes('electric')) {
-        vendor = 'Enel Distribución';
-        category = 'Servicios Básicos & Hogar';
-        amount = 42300;
-      } else if (lowerName.includes('combustible') || lowerName.includes('shell') || lowerName.includes('copec')) {
-        vendor = 'Estación Copec';
-        category = 'Transporte & Movilidad';
-        amount = 25000;
-      } else if (lowerName.includes('farmacia') || lowerName.includes('salud') || lowerName.includes('cruz')) {
-        vendor = 'Farmacias Cruz Verde';
-        category = 'Salud & Bienestar';
-        amount = 14200;
-      } else if (lowerName.includes('starbucks') || lowerName.includes('cafe') || lowerName.includes('restaurant')) {
-        vendor = 'Starbucks Coffee';
-        category = 'Restaurantes & Ocio';
-        amount = 7600;
-      }
-
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      setScanResult({
-        vendor,
-        amount,
-        displayAmount: formatInputLive(amount),
-        date: todayStr,
-        category,
-        description: `Boleta / Factura ${vendor}`
-      });
-
+      const fullText = result.data.text || '';
+      setExtractedRawText(fullText);
+      parseExtractedReceipt(fullText);
+    } catch (err) {
+      console.error('Error durante OCR:', err);
+      // Fallback simple parser
+      parseExtractedReceipt('');
+    } finally {
       setIsScanning(false);
-    }, 1200);
+    }
+  };
+
+  // Intelligent Parser of Real Extracted Text
+  const parseExtractedReceipt = (rawText: string) => {
+    const lines = rawText
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    let vendor = 'Comercio / Proveedor';
+    let amount = 0;
+    let date = new Date().toISOString().split('T')[0];
+    let category = 'Otros Gastos';
+
+    // 1. Vendor Name Detection (top non-trivial lines, ignoring common keywords)
+    const ignoreWords = /rut|boleta|factura|ticket|electronica|sii|giro|fecha|hora|caja|cajero|folio|atendido|bienvenido|gracias/i;
+    for (let i = 0; i < Math.min(lines.length, 6); i++) {
+      const line = lines[i];
+      if (line.length >= 3 && !/^\d+$/.test(line) && !ignoreWords.test(line)) {
+        const cleanVendor = line.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.&-]/g, '').trim();
+        if (cleanVendor.length >= 3 && !/^\d+$/.test(cleanVendor)) {
+          vendor = cleanVendor;
+          break;
+        }
+      }
+    }
+
+    // 2. Real Date Detection (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
+    const dateRegex = /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})\b|\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/;
+    for (const line of lines) {
+      const match = line.match(dateRegex);
+      if (match) {
+        try {
+          if (match[1] && match[2] && match[3]) {
+            let day = parseInt(match[1], 10);
+            let month = parseInt(match[2], 10);
+            let year = parseInt(match[3], 10);
+            if (year < 100) year += 2000;
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              break;
+            }
+          } else if (match[4] && match[5] && match[6]) {
+            let year = parseInt(match[4], 10);
+            let month = parseInt(match[5], 10);
+            let day = parseInt(match[6], 10);
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              break;
+            }
+          }
+        } catch {
+          // ignore fallback
+        }
+      }
+    }
+
+    // 3. Real Total Amount Detection
+    // Priority: Lines with "TOTAL", "TOTAL A PAGAR", "MONTO TOTAL", "VALOR TOTAL", "IMPORTE"
+    const totalLineRegexes = [
+      /total\s*(?:a\s*pagar)?\s*[:$]?\s*([0-9.,]+)/i,
+      /monto\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
+      /valor\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
+      /importe\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
+      /pago\s*total\s*[:$]?\s*([0-9.,]+)/i,
+      /total\s*([0-9.,]+)/i
+    ];
+
+    let foundTotalAmount = 0;
+
+    for (const line of lines) {
+      for (const rx of totalLineRegexes) {
+        const m = line.match(rx);
+        if (m && m[1]) {
+          const numRaw = m[1].replace(/\./g, '').replace(/,/g, '.');
+          const parsed = parseFloat(numRaw);
+          if (!isNaN(parsed) && parsed > 0 && parsed < 100000000) {
+            foundTotalAmount = Math.round(parsed);
+            break;
+          }
+        }
+      }
+      if (foundTotalAmount > 0) break;
+    }
+
+    // Fallback: If no explicit TOTAL keyword, look for all numbers in the receipt and pick the most reasonable highest total
+    if (foundTotalAmount === 0) {
+      const numbers: number[] = [];
+      for (const line of lines) {
+        const matches = line.matchAll(/\$?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2})?|[0-9]+)/g);
+        for (const m of matches) {
+          const numStr = m[1].replace(/\./g, '').replace(/,/g, '.');
+          const val = parseFloat(numStr);
+          // filter out barcode numbers, rut or years
+          if (!isNaN(val) && val >= 100 && val < 50000000 && val !== 2024 && val !== 2025 && val !== 2026) {
+            numbers.push(Math.round(val));
+          }
+        }
+      }
+      if (numbers.length > 0) {
+        foundTotalAmount = Math.max(...numbers);
+      }
+    }
+
+    amount = foundTotalAmount;
+
+    // 4. Real Category Matching based on actual receipt contents
+    const lowerText = rawText.toLowerCase();
+    if (
+      lowerText.includes('super') || 
+      lowerText.includes('lider') || 
+      lowerText.includes('jumbo') || 
+      lowerText.includes('unimarc') || 
+      lowerText.includes('santa isabel') || 
+      lowerText.includes('tottus') || 
+      lowerText.includes('abarrotes') || 
+      lowerText.includes('panaderia') || 
+      lowerText.includes('lacteos') || 
+      lowerText.includes('carniceria') || 
+      lowerText.includes('verduras') || 
+      lowerText.includes('alimentos')
+    ) {
+      category = 'Supermercado & Alimentos';
+    } else if (
+      lowerText.includes('copec') || 
+      lowerText.includes('shell') || 
+      lowerText.includes('petrobras') || 
+      lowerText.includes('combustible') || 
+      lowerText.includes('gasolina') || 
+      lowerText.includes('diesel') || 
+      lowerText.includes('uber') || 
+      lowerText.includes('didi') || 
+      lowerText.includes('cabify') || 
+      lowerText.includes('estacionamiento') || 
+      lowerText.includes('metro') || 
+      lowerText.includes('autopista')
+    ) {
+      category = 'Transporte & Combustible';
+    } else if (
+      lowerText.includes('farmacia') || 
+      lowerText.includes('cruz verde') || 
+      lowerText.includes('ahumada') || 
+      lowerText.includes('salcobrand') || 
+      lowerText.includes('dr simi') || 
+      lowerText.includes('medicamento') || 
+      lowerText.includes('doctor') || 
+      lowerText.includes('clinica') || 
+      lowerText.includes('hospital') || 
+      lowerText.includes('dental')
+    ) {
+      category = 'Salud & Farmacia';
+    } else if (
+      lowerText.includes('restaurant') || 
+      lowerText.includes('cafe') || 
+      lowerText.includes('bar') || 
+      lowerText.includes('starbucks') || 
+      lowerText.includes('mcdonald') || 
+      lowerText.includes('burger') || 
+      lowerText.includes('pizza') || 
+      lowerText.includes('sushi') || 
+      lowerText.includes('pedidosya') || 
+      lowerText.includes('rappi') || 
+      lowerText.includes('uber eats')
+    ) {
+      category = 'Restaurantes & Ocio';
+    } else if (
+      lowerText.includes('enel') || 
+      lowerText.includes('cge') || 
+      lowerText.includes('luz') || 
+      lowerText.includes('aguas andinas') || 
+      lowerText.includes('esval') || 
+      lowerText.includes('essbio') || 
+      lowerText.includes('gasco') || 
+      lowerText.includes('lipigas') || 
+      lowerText.includes('abastible') || 
+      lowerText.includes('metrogas') || 
+      lowerText.includes('vtr') || 
+      lowerText.includes('movistar') || 
+      lowerText.includes('entel') || 
+      lowerText.includes('claro') || 
+      lowerText.includes('wom')
+    ) {
+      category = 'Servicios Básicos & Cuentas';
+    } else if (
+      lowerText.includes('falabella') || 
+      lowerText.includes('ripley') || 
+      lowerText.includes('paris') || 
+      lowerText.includes('h&m') || 
+      lowerText.includes('zara') || 
+      lowerText.includes('ropa') || 
+      lowerText.includes('calzado') || 
+      lowerText.includes('amazon') || 
+      lowerText.includes('aliexpress') || 
+      lowerText.includes('mercadolibre')
+    ) {
+      category = 'Compras & Tiendas';
+    }
+
+    setScanResult({
+      vendor: vendor || 'Comercio',
+      amount: amount || 0,
+      displayAmount: formatInputLive(amount || 0),
+      date,
+      category,
+      description: `Gasto en ${vendor || 'Comercio'}`
+    });
   };
 
   const handleConfirmAndSave = (e: React.FormEvent) => {
@@ -122,74 +322,95 @@ export const ReceiptScannerModal: React.FC = () => {
       paymentMethod: 'card',
       status: 'completed',
       isRecurring: false,
-      tags: ['Boleta Escaneada', 'OCR'],
+      tags: ['Boleta OCR Real'],
       vendorOrClient: scanResult.vendor
     });
 
+    triggerCelebration();
     setIsReceiptScannerOpen(false);
     setImagePreview(null);
     setScanResult(null);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-emerald-950/60 my-auto text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto select-none">
+      <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-emerald-950/60 my-auto text-slate-100 space-y-4">
         
         {/* Close Button */}
         <button
+          type="button"
           onClick={() => { setIsReceiptScannerOpen(false); setImagePreview(null); setScanResult(null); }}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
           <X size={18} />
         </button>
 
         {/* Header */}
-        <div className="text-center space-y-1.5 mb-5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">
             <Scan size={14} className="text-emerald-400" />
-            <span>Escanear Boleta</span>
+            <span>Escáner OCR Real</span>
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Sube una foto de tu Boleta o Factura
+            Escaneo Real de Boleta o Factura
           </h2>
 
           <p className="text-xs text-slate-400">
-            Elige la foto de tu comprobante y nosotros rellenamos el monto y la categoría por ti.
+            Sube o toma una foto y nuestro lector OCR procesará el texto real de tu comprobante.
           </p>
         </div>
 
-        {/* Upload Drop Zone */}
+        {/* Upload / Camera Drop Zone */}
         {!imagePreview ? (
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-3xl p-8 text-center cursor-pointer transition-all bg-slate-800/30 hover:bg-slate-800/60 space-y-3 group"
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              accept="image/*,.pdf"
-              className="hidden"
-            />
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Upload size={28} />
-            </div>
-            <div className="space-y-1">
-              <p className="font-bold text-sm text-white">Haz clic o arrastra tu boleta aquí</p>
-              <p className="text-xs text-slate-400">Soporta fotos JPG, PNG o documentos PDF</p>
+          <div className="space-y-3">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all bg-slate-800/30 hover:bg-slate-800/60 space-y-3 group"
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
+
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow-emerald">
+                <Upload size={28} />
+              </div>
+              <div className="space-y-1">
+                <p className="font-bold text-sm text-white">Haz clic para subir una foto de tu boleta</p>
+                <p className="text-xs text-slate-400">Soporta JPG, PNG, WEBP o capturas de pantalla</p>
+              </div>
             </div>
 
-            <div className="pt-2">
+            {/* Direct Camera Button (Mobile & Tablet) */}
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsReceiptScannerOpen(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                onClick={() => cameraInputRef.current?.click()}
+                className="py-2.5 px-3 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
-                Cerrar
+                <Camera size={16} />
+                <span>Tomar Foto</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="py-2.5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <Upload size={16} />
+                <span>Elegir Archivo</span>
               </button>
             </div>
           </div>
@@ -198,21 +419,37 @@ export const ReceiptScannerModal: React.FC = () => {
             
             {/* Image Preview & Scanning Indicator */}
             <div className="relative h-44 rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 flex items-center justify-center">
-              <img src={imagePreview} alt="Boleta" className="h-full w-full object-contain opacity-70" />
+              <img src={imagePreview} alt="Boleta" className="h-full w-full object-contain" />
+              
               {isScanning && (
-                <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-2 text-emerald-400 animate-pulse">
-                  <Scan size={32} className="animate-spin" />
-                  <span className="text-xs font-bold">Extrayendo datos de la boleta...</span>
+                <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 p-4 text-emerald-400 text-center">
+                  <div className="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+                  <div className="space-y-1 w-full max-w-xs">
+                    <p className="text-xs font-bold text-white">{progressStatus}</p>
+                    <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
+                        style={{ width: `${scanProgress}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Extracted Data Form */}
             {scanResult && !isScanning && (
-              <form onSubmit={handleConfirmAndSave} className="space-y-3 pt-2">
-                <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-300">Total detectado en boleta:</span>
-                  <span className="font-black text-lg text-emerald-400 font-mono">{formatMoney(scanResult.amount)}</span>
+              <form onSubmit={handleConfirmAndSave} className="space-y-3 pt-1">
+                
+                {/* Result Card */}
+                <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-semibold text-slate-300 block">Total detectado en boleta:</span>
+                    <span className="text-[10px] text-emerald-400 font-mono">Lectura óptica real</span>
+                  </div>
+                  <span className="font-black text-xl text-emerald-400 font-mono">
+                    {formatMoney(scanResult.amount)}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -223,12 +460,12 @@ export const ReceiptScannerModal: React.FC = () => {
                       required
                       value={scanResult.vendor}
                       onChange={(e) => setScanResult({ ...scanResult, vendor: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-bold text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 mb-1">Monto Exacto ({currentCurrency.symbol})</label>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">Monto ({currentCurrency.symbol})</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -239,14 +476,14 @@ export const ReceiptScannerModal: React.FC = () => {
                         displayAmount: formatInputLive(e.target.value),
                         amount: parseRawFromDisplay(e.target.value) 
                       })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-emerald-400 font-mono font-bold text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 mb-1">Categoría Sugerida</label>
+                    <label className="block text-[11px] font-bold text-slate-400 mb-1">Categoría</label>
                     <input
                       type="text"
                       required
@@ -268,17 +505,37 @@ export const ReceiptScannerModal: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Raw OCR Text Dropdown */}
+                {extractedRawText && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowRawText(!showRawText)}
+                      className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                    >
+                      <Eye size={12} />
+                      <span>{showRawText ? 'Ocultar texto OCR extraído' : 'Ver texto real leído por el escáner'}</span>
+                    </button>
+                    {showRawText && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] text-slate-300 font-mono max-h-28 overflow-y-auto whitespace-pre-wrap">
+                        {extractedRawText}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bottom Actions */}
                 <div className="pt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => { setImagePreview(null); setScanResult(null); }}
-                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
                   >
                     Escanear Otra
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>Guardar Gasto en Cartola</span>
                     <ArrowRight size={15} />
