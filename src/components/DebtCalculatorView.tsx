@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Lightbulb,
   Copy,
-  Check
+  Check,
+  Building2
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Debt } from '../types';
@@ -36,7 +37,8 @@ export const DebtCalculatorView: React.FC = () => {
     metrics,
     currentCurrency,
     addDebt,
-    triggerCelebration 
+    triggerCelebration,
+    setIsCMFModalOpen
   } = useFinancial();
 
   // Selected Strategy: 'avalanche' (High APR first) vs 'snowball' (Lowest balance first)
@@ -183,13 +185,26 @@ export const DebtCalculatorView: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => openDebtModal()}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-glow-amber transition-all flex items-center justify-center gap-1.5"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>+ Registrar Deuda</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => setIsCMFModalOpen(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              title="Enlazar con informe oficial de CMF Chile"
+            >
+              <Building2 size={15} />
+              <span>Enlace CMF Chile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openDebtModal()}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-glow-amber transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              <span>+ Registrar Deuda</span>
+            </button>
+          </div>
         </div>
 
         {/* Global Debt Summary Metrics */}

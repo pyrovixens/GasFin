@@ -5,39 +5,48 @@ import {
   Upload, 
   RotateCcw, 
   Coins, 
-  Database,
-  FileCode,
-  Sparkles,
-  Lock,
-  CheckCircle2,
-  User,
-  Cloud,
-  FileSpreadsheet
+  Database, 
+  FileCode, 
+  Sparkles, 
+  Lock, 
+  CheckCircle2, 
+  User, 
+  Cloud, 
+  FileSpreadsheet,
+  Sun,
+  Moon,
+  LogOut,
+  Building2,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../data/initialData';
 
 export const SettingsView: React.FC = () => {
   const { 
-    userName,
-    setUserName,
+    userName, 
+    setUserName, 
     currentCurrency, 
     setCurrency, 
-    lockAndSetCurrencyAndName,
-    unlockCurrencySelector,
+    lockAndSetCurrencyAndName, 
+    unlockCurrencySelector, 
     exportDataAsJSON, 
-    exportDataToExcel,
+    exportDataToExcel, 
     importDataFromJSON, 
-    clearAllDataToZero,
-    supabaseUser,
-    isCloudConnected,
-    setIsAuthModalOpen,
-    syncLocalToCloud,
-    logoutSupabase,
-    transactions,
-    debts,
-    goals,
-    savingsTips,
+    clearAllDataToZero, 
+    supabaseUser, 
+    isCloudConnected, 
+    setIsAuthModalOpen, 
+    syncLocalToCloud, 
+    logoutUser,
+    isDarkMode,
+    toggleDarkMode,
+    setIsCMFModalOpen,
+    transactions, 
+    debts, 
+    goals, 
+    savingsTips, 
     formatMoney 
   } = useFinancial();
 
@@ -45,6 +54,7 @@ export const SettingsView: React.FC = () => {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [tempName, setTempName] = useState(userName);
   const [nameSavedStatus, setNameSavedStatus] = useState(false);
+  const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -74,7 +84,7 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-4xl">
+    <div className="space-y-6 animate-fade-in max-w-4xl pb-12">
       
       {/* Header */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
@@ -83,9 +93,9 @@ export const SettingsView: React.FC = () => {
             <Settings size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold text-white">Configuración del Sistema & Perfil</h2>
+            <h2 className="text-xl font-extrabold text-white">Configuración del Sistema & Seguridad</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Administra tu nombre de usuario, divisa fija y copias de seguridad en Excel y JSON.
+              Administra tu perfil, tema visual, enlaces bancarios CMF y copias de seguridad.
             </p>
           </div>
         </div>
@@ -109,7 +119,7 @@ export const SettingsView: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-glow-emerald transition-all cursor-pointer"
           >
             Actualizar Nombre
           </button>
@@ -122,143 +132,131 @@ export const SettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* Primary Locked Currency */}
+      {/* Theme & Visual Mode Card */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Coins size={18} className="text-amber-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Divisa Principal Fija</h3>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
-            <Lock size={12} />
-            <span>Fijada y Protegida</span>
-          </div>
-        </div>
-
-        <p className="text-xs text-slate-400">
-          Esta divisa se mantiene fija en todos tus cálculos, reportes y dashboards con sus reglas oficiales de puntos y decimales:
-        </p>
-
-        {/* Selected Currency Highlight Card */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/90 to-teal-950/30 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <span className="text-xs text-slate-400">Moneda activa:</span>
-            <h4 className="text-lg font-black text-white mt-0.5">
-              {currentCurrency.code} — {currentCurrency.name}
-            </h4>
-            <p className="text-xs text-slate-300 mt-1">
-              Ejemplo de formato: <strong className="font-mono text-emerald-400">{formatMoney(1200000)}</strong>
+            <div className="flex items-center gap-2">
+              {isDarkMode ? <Moon size={18} className="text-indigo-400" /> : <Sun size={18} className="text-amber-400" />}
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Modo Visual</h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              {isDarkMode ? 'Modo Oscuro de alto contraste activado.' : 'Modo Claro iluminado activado.'}
             </p>
           </div>
 
           <button
-            onClick={unlockCurrencySelector}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 hover:border-emerald-500 transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+            type="button"
+            onClick={toggleDarkMode}
+            className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 transition-all flex items-center gap-2 cursor-pointer"
           >
-            <span>Cambiar Divisa Principal</span>
+            {isDarkMode ? (
+              <>
+                <Sun size={16} className="text-amber-400" />
+                <span>Cambiar a Modo Claro</span>
+              </>
+            ) : (
+              <>
+                <Moon size={16} className="text-indigo-400" />
+                <span>Cambiar a Modo Oscuro</span>
+              </>
+            )}
           </button>
         </div>
-
-        {/* Currency Options Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
-          {SUPPORTED_CURRENCIES.map((curr) => {
-            const isSelected = curr.code === currentCurrency.code;
-            return (
-              <button
-                key={curr.code}
-                onClick={() => lockAndSetCurrencyAndName(curr.code, userName)}
-                className={`p-4 rounded-2xl text-left border transition-all ${
-                  isSelected
-                    ? 'bg-emerald-950/30 border-emerald-500 shadow-glow-emerald text-white'
-                    : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:text-slate-200 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-extrabold text-sm text-white">{curr.code} ({curr.symbol})</span>
-                  {isSelected && <CheckCircle2 size={16} className="text-emerald-400" />}
-                </div>
-                <p className="text-xs text-slate-400 truncate">{curr.name}</p>
-                <p className="text-[11px] font-mono text-emerald-400/90 mt-2">{curr.example}</p>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Cloud Database & Multi-user Sync */}
+      {/* CMF Chile Integration Card */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Cloud size={18} className="text-emerald-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Servidor Seguro en la Nube (GastFin Cloud)</h3>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Building2 size={18} className="text-sky-400" />
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">CMF Chile — Conoce Tu Deuda</h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Enlaza tu informe oficial de la CMF (Comisión para el Mercado Financiero) con ClaveÚnica.
+            </p>
           </div>
-          <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
-            supabaseUser 
-              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-              : 'bg-slate-800 text-slate-400 border-slate-700'
-          }`}>
-            {supabaseUser ? '🟢 En Línea' : '⚪ Modo Local / Offline'}
-          </span>
-        </div>
 
-        <p className="text-xs text-slate-400">
-          {supabaseUser 
-            ? `Conectado como ${supabaseUser.email}. Todos tus movimientos, presupuestos y metas se sincronizan en tiempo real y cifrados de extremo a extremo.` 
-            : 'Conecta tu cuenta para guardar tus finanzas en la nube y acceder desde tu PC, teléfono Android o iPhone.'}
-        </p>
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          {supabaseUser ? (
-            <>
-              <button
-                onClick={syncLocalToCloud}
-                className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2"
-              >
-                <Database size={15} />
-                <span>Forzar Sincronización a la Nube</span>
-              </button>
-              <button
-                onClick={logoutSupabase}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-rose-400 font-bold text-xs border border-slate-700 transition-colors"
-              >
-                Cerrar Sesión Cloud
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2"
-            >
-              <Cloud size={15} />
-              <span>Iniciar Sesión o Crear Cuenta Cloud</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsCMFModalOpen(true)}
+            className="px-4 py-2.5 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+          >
+            <Building2 size={16} />
+            <span>Abrir Asistente CMF</span>
+          </button>
         </div>
       </div>
 
-      {/* Backup & Export to Excel & JSON */}
+      {/* Cloud & Session Security Card */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Database size={18} className="text-teal-400" />
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Exportación y Copia de Seguridad</h3>
-        </div>
-        <p className="text-xs text-slate-400">
-          Tus datos se guardan de forma privada y permanente en tu navegador. Puedes generar hojas de cálculo de Excel o respaldos JSON en cualquier momento.
-        </p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-emerald-400" />
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Seguridad & Sesión</h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Protección de datos con expiración automática de sesión por inactividad de 15 minutos.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <button
-            onClick={exportDataToExcel}
-            className="px-4 py-3 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 font-bold text-xs border border-emerald-500/40 shadow-glow-emerald transition-all flex items-center justify-center gap-2"
+            type="button"
+            onClick={logoutUser}
+            className="px-4 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
           >
-            <FileSpreadsheet size={16} className="text-emerald-400" />
+            <LogOut size={16} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Currency Configuration */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Coins size={18} className="text-amber-400" />
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Moneda Principal</h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Moneda actual: <strong className="text-white font-mono">{currentCurrency.name} ({currentCurrency.symbol})</strong>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={unlockCurrencySelector}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-colors cursor-pointer"
+          >
+            Cambiar Moneda
+          </button>
+        </div>
+      </div>
+
+      {/* Backups: Excel and JSON */}
+      <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
+        <div className="flex items-center gap-2">
+          <Database size={18} className="text-emerald-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Respaldos & Exportación</h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={exportDataToExcel}
+            className="px-4 py-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet size={16} />
             <span>Descargar en Excel (.csv)</span>
           </button>
 
           <button
+            type="button"
             onClick={exportDataAsJSON}
-            className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-2"
+            className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Download size={16} className="text-emerald-400" />
             <span>Descargar Respaldo JSON</span>
@@ -273,11 +271,12 @@ export const SettingsView: React.FC = () => {
           />
 
           <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-indigo-500 transition-all flex items-center justify-center gap-2"
+            className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Upload size={16} className="text-indigo-400" />
-            <span>Restaurar Archivo JSON</span>
+            <span>Restaurar Respaldo JSON</span>
           </button>
         </div>
 
@@ -293,22 +292,58 @@ export const SettingsView: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h4 className="text-xs font-bold text-white">Vaciar y Limpiar Todo a Cero</h4>
-            <p className="text-[11px] text-slate-400">Elimina todos los registros para reiniciar el libro mayor.</p>
+            <p className="text-[11px] text-slate-400">Elimina todos los registros locales para reiniciar el libro mayor.</p>
           </div>
 
           <button
-            onClick={() => {
-              if (confirm('¿Vaciar y dejar todo en cero para iniciar de nuevo?')) {
-                clearAllDataToZero();
-              }
-            }}
-            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs border border-rose-500/30 transition-colors flex items-center gap-1.5"
+            type="button"
+            onClick={() => setIsConfirmingClearAll(true)}
+            className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs border border-rose-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw size={14} />
             <span>Limpiar Todo a Cero</span>
           </button>
         </div>
       </div>
+
+      {/* Floating Confirmation Modal for Resetting Everything */}
+      {isConfirmingClearAll && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
+          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">¿Reiniciar Todo a Cero?</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Esta acción vaciará movimientos, deudas y presupuestos para que comiences desde cero.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingClearAll(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearAllDataToZero();
+                  setIsConfirmingClearAll(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors shadow-glow-rose cursor-pointer"
+              >
+                Confirmar y Vaciar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

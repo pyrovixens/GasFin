@@ -35,6 +35,16 @@ export const CurrencySetupModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-emerald-950/50 my-auto">
         
+        {/* Top-right close X */}
+        <button
+          type="button"
+          onClick={() => setIsCurrencySetupModalOpen(false)}
+          className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          title="Cerrar ventana"
+        >
+          ✕
+        </button>
+
         {/* Top Badge & Header */}
         <div className="text-center space-y-2 mb-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black uppercase tracking-wider">

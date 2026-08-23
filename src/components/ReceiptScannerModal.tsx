@@ -179,6 +179,19 @@ export const ReceiptScannerModal: React.FC = () => {
               <p className="font-bold text-sm text-white">Haz clic o arrastra tu boleta aquí</p>
               <p className="text-xs text-slate-400">Soporta fotos JPG, PNG o documentos PDF</p>
             </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsReceiptScannerOpen(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">

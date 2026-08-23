@@ -9,17 +9,18 @@ import {
   Settings, 
   ChevronLeft, 
   ChevronRight, 
-  ShieldAlert,
-  Sparkles,
-  Building2,
-  X,
-  User,
-  BarChart3,
-  Calendar,
-  Zap,
-  Cloud,
-  Lock,
-  FileText
+  ShieldAlert, 
+  Sparkles, 
+  Building2, 
+  X, 
+  User, 
+  BarChart3, 
+  Calendar, 
+  Zap, 
+  Cloud, 
+  Lock, 
+  FileText,
+  LogOut
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { ActiveView } from '../types';
@@ -38,7 +39,8 @@ export const Sidebar: React.FC = () => {
     userName,
     supabaseUser,
     setIsAuthModalOpen,
-    setIsCurrencySetupModalOpen
+    setIsCurrencySetupModalOpen,
+    logoutUser
   } = useFinancial();
 
   const menuItems = [
@@ -289,13 +291,13 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* Profile Footer */}
-        <div 
-          onClick={() => setIsCurrencySetupModalOpen(true)}
-          className="p-3 border-t border-slate-800/80 bg-slate-950/60 cursor-pointer hover:bg-slate-900/80 transition-colors"
-          title="Editar nombre y divisa principal"
-        >
-          <div className={`flex items-center gap-2.5 ${isSidebarCollapsed && window.innerWidth >= 768 ? 'justify-center' : ''}`}>
+        {/* Profile & Logout Footer */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between gap-2">
+          <div 
+            onClick={() => setIsCurrencySetupModalOpen(true)}
+            className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+            title="Editar nombre y divisa principal"
+          >
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-xs flex-shrink-0">
               {userName ? userName.charAt(0).toUpperCase() : 'G'}
             </div>
@@ -306,6 +308,17 @@ export const Sidebar: React.FC = () => {
               </div>
             )}
           </div>
+
+          {(!isSidebarCollapsed || window.innerWidth < 768) && (
+            <button
+              type="button"
+              onClick={logoutUser}
+              title="Cerrar sesión"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </aside>
     </>

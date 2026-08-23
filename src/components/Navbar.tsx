@@ -5,11 +5,12 @@ import {
   Moon, 
   ShieldAlert, 
   CheckCircle2, 
-  Coins,
-  FileSpreadsheet,
-  Scan,
-  Cloud,
-  User
+  Coins, 
+  FileSpreadsheet, 
+  Scan, 
+  Cloud, 
+  User,
+  LogOut
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
@@ -29,7 +30,8 @@ export const Navbar: React.FC = () => {
     setIsAuthModalOpen,
     setIsCurrencySetupModalOpen,
     setIsDeficitModalOpen,
-    exportDataToExcel
+    exportDataToExcel,
+    logoutUser
   } = useFinancial();
 
   const getTitle = () => {
@@ -141,17 +143,30 @@ export const Navbar: React.FC = () => {
 
         {/* Dark / Light Mode Toggle */}
         <button
+          type="button"
           onClick={toggleDarkMode}
           title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
+          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors cursor-pointer"
         >
           {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-400" />}
         </button>
 
+        {/* Cerrar Sesión Quick Button */}
+        <button
+          type="button"
+          onClick={logoutUser}
+          title="Cerrar sesión de forma segura"
+          className="hidden sm:flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-700/60 hover:border-rose-500/40 text-xs font-semibold transition-all cursor-pointer"
+        >
+          <LogOut size={14} />
+          <span className="hidden lg:inline">Cerrar Sesión</span>
+        </button>
+
         {/* Primary Action Button: "Ingreso" */}
         <button
+          type="button"
           onClick={() => openTransactionModal('income')}
-          className="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow-glow-emerald hover:shadow-lg transition-all active:scale-95"
+          className="px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow-glow-emerald hover:shadow-lg transition-all active:scale-95 cursor-pointer"
         >
           <span>Ingreso</span>
         </button>

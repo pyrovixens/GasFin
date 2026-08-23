@@ -139,6 +139,15 @@ interface FinancialContextType {
   isDeficitModalOpen: boolean;
   setIsDeficitModalOpen: (open: boolean) => void;
 
+  // CMF Chile 'Conoce tu Deuda' Modal
+  isCMFModalOpen: boolean;
+  setIsCMFModalOpen: (open: boolean) => void;
+
+  // Session Security & Inactivity Locking
+  isSessionLocked: boolean;
+  unlockSession: () => void;
+  logoutUser: () => void;
+
   isDebtModalOpen: boolean;
   openDebtModal: (debt?: Debt) => void;
   closeDebtModal: () => void;
@@ -532,12 +541,59 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
+  // CMF Chile Modal State
+  const [isCMFModalOpen, setIsCMFModalOpen] = useState(false);
+
+  // Banking Session Security: Inactivity Tracker (15 minutes)
+  const [isSessionLocked, setIsSessionLocked] = useState(false);
+
+  useEffect(() => {
+    let timeoutId: any = null;
+    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of inactivity
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsSessionLocked(true);
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    activityEvents.forEach(evt => {
+      window.addEventListener(evt, resetTimer, { passive: true });
+    });
+
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(evt => {
+        window.removeEventListener(evt, resetTimer);
+      });
+    };
+  }, []);
+
+  const unlockSession = () => {
+    setIsSessionLocked(false);
+    triggerCelebration();
+  };
+
+  const logoutUser = async () => {
+    if (supabaseUser) {
+      await logoutSupabase();
+    }
+    setIsSessionLocked(false);
+    setActiveView('dashboard');
+  };
+
   useEffect(() => {
     localStorage.setItem('gastfin_theme_v6', JSON.stringify(isDarkMode));
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     } else {
       document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
     }
   }, [isDarkMode]);
 
@@ -1270,6 +1326,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         openGoalModal,
         closeGoalModal,
         editingGoal,
+        isCMFModalOpen,
+        setIsCMFModalOpen,
+        isSessionLocked,
+        unlockSession,
+        logoutUser,
         clearAllDataToZero,
         resetToDemoData,
         exportDataAsJSON,

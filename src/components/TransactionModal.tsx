@@ -416,11 +416,18 @@ export const TransactionModal: React.FC = () => {
           </select>
         </div>
 
-        {/* Action Button */}
-        <div className="pt-2 border-t border-slate-800">
+        {/* Action Buttons */}
+        <div className="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={closeTransactionModal}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer transition-colors"
+          >
+            Cerrar
+          </button>
           <button
             type="submit"
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs shadow-glow-emerald transition-all"
+            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs shadow-glow-emerald transition-all cursor-pointer"
           >
             {editingTransaction ? 'Guardar Cambios' : (type === 'income' ? 'Guardar Ingreso' : 'Guardar Gasto')}
           </button>

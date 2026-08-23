@@ -21,6 +21,9 @@ import { GoalModal } from './components/GoalModal';
 import { DeficitAlertModal } from './components/DeficitAlertModal';
 import { CurrencySetupModal } from './components/CurrencySetupModal';
 import { AuthModal } from './components/AuthModal';
+import { CMFDebtSyncModal } from './components/CMFDebtSyncModal';
+import { SessionLockModal } from './components/SessionLockModal';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 
 export const AppContent: React.FC = () => {
   const { activeView } = useFinancial();
@@ -55,8 +58,8 @@ export const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
-      {/* Responsive Left Sidebar */}
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+      {/* Responsive Left Sidebar (Desktop & Tablet) */}
       <Sidebar />
 
       {/* Main Content Viewport */}
@@ -64,27 +67,30 @@ export const AppContent: React.FC = () => {
         {/* Sticky Executive Navbar */}
         <Navbar />
 
-        {/* Dynamic View Content with Mobile Bottom Padding */}
+        {/* Dynamic View Content with Responsive Layout (Mobile / Tablet / PC) */}
         <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           {renderActiveView()}
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
+      {/* Mobile Bottom Navigation Bar (< 768px) */}
       <BottomNavBar />
 
-      {/* Floating / Responsive Transaction Window */}
-      <TransactionModal />
-
-      {/* Intelligent OCR Receipt Scanner */}
-      <ReceiptScannerModal />
+      {/* Floating Scroll To Top Button */}
+      <ScrollToTopButton />
 
       {/* Modals & Dialogs */}
+      <TransactionModal />
+      <ReceiptScannerModal />
       <DebtModal />
       <GoalModal />
       <DeficitAlertModal />
       <CurrencySetupModal />
       <AuthModal />
+      <CMFDebtSyncModal />
+
+      {/* Banking-grade Inactivity Security Overlay */}
+      <SessionLockModal />
     </div>
   );
 };
