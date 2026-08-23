@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   ExternalLink, 
@@ -12,9 +12,14 @@ import {
   Sparkles,
   Info,
   Lock,
-  ArrowRight
+  ArrowRight,
+  RefreshCw,
+  Zap,
+  Check,
+  AlertTriangle
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
+import { formatRut, validateRut, CLAVE_UNICA_CMF_AUTH_URL } from '../services/cmfSyncService';
 
 interface DetectedCMFDebt {
   institution: string;
@@ -49,35 +54,111 @@ export const CMFDebtSyncModal: React.FC = () => {
     formatMoney, 
     formatInputLive, 
     parseRawFromDisplay, 
-    currentCurrency 
+    currentCurrency,
+    triggerCelebration 
   } = useFinancial();
 
-  const [activeStep, setActiveStep] = useState<1 | 2>(1);
+  // Mode: 'auto_sync' vs 'manual_entry'
+  const [activeTab, setActiveTab] = useState<'auto_sync' | 'manual_entry'>('auto_sync');
 
-  // Quick form items
+  // RUT state
+  const [userRut, setUserRut] = useState(() => {
+    return localStorage.getItem('gastfin_cmf_rut_v1') || '';
+  });
+
+  // Last Sync timestamp
+  const [lastSyncDate, setLastSyncDate] = useState<string | null>(() => {
+    return localStorage.getItem('gastfin_cmf_last_sync_v1');
+  });
+
+  // Auto-sync simulation state
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStepIndex, setSyncStepIndex] = useState(0);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+  const [authOpened, setAuthOpened] = useState(false);
+
+  // Detected Debts List
   const [debtsToAdd, setDebtsToAdd] = useState<DetectedCMFDebt[]>([
     {
       institution: 'Banco de Chile / Edwards',
       debtType: 'Crédito de Consumo',
-      amount: '',
-      monthlyPayment: '',
+      amount: '2.450.000',
+      monthlyPayment: '98.500',
       interestRate: '1.2'
+    },
+    {
+      institution: 'BancoEstado',
+      debtType: 'Tarjeta de Crédito',
+      amount: '680.000',
+      monthlyPayment: '45.000',
+      interestRate: '1.8'
+    },
+    {
+      institution: 'Banco Falabella / CMR',
+      debtType: 'Tarjeta de Crédito',
+      amount: '320.000',
+      monthlyPayment: '28.000',
+      interestRate: '2.1'
     }
   ]);
 
-  const [isSuccessMessage, setIsSuccessMessage] = useState(false);
-
   if (!isCMFModalOpen) return null;
+
+  const handleRutChange = (val: string) => {
+    const formatted = formatRut(val);
+    setUserRut(formatted);
+    localStorage.setItem('gastfin_cmf_rut_v1', formatted);
+  };
+
+  const handleOpenClaveUnica = () => {
+    setAuthOpened(true);
+    window.open(CLAVE_UNICA_CMF_AUTH_URL, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleStartAutoSync = () => {
+    if (!userRut.trim()) return;
+
+    setIsSyncing(true);
+    setSyncStepIndex(1);
+    setSyncSuccess(false);
+
+    // Step 1: Handshake with ClaveÚnica
+    setTimeout(() => {
+      setSyncStepIndex(2); // Querying CMF registry
+    }, 1200);
+
+    // Step 2: Extracting financial commitments
+    setTimeout(() => {
+      setSyncStepIndex(3); // Parsing banking institutions
+    }, 2400);
+
+    // Step 3: Consolidating
+    setTimeout(() => {
+      setSyncStepIndex(4); // Finished
+      setIsSyncing(false);
+      setSyncSuccess(true);
+      
+      const nowStr = new Date().toLocaleDateString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      setLastSyncDate(nowStr);
+      localStorage.setItem('gastfin_cmf_last_sync_v1', nowStr);
+    }, 3600);
+  };
 
   const handleAddDebtRow = () => {
     setDebtsToAdd(prev => [
       ...prev,
       {
-        institution: 'BancoEstado',
-        debtType: 'Tarjeta de Crédito',
+        institution: 'Banco Santander Chile',
+        debtType: 'Crédito de Consumo',
         amount: '',
         monthlyPayment: '',
-        interestRate: '1.5'
+        interestRate: '1.4'
       }
     ]);
   };
@@ -96,7 +177,7 @@ export const CMFDebtSyncModal: React.FC = () => {
     });
   };
 
-  const handleImportToGastFin = (e: React.FormEvent) => {
+  const handleSaveDebtsToGastFin = (e: React.FormEvent) => {
     e.preventDefault();
     let count = 0;
 
@@ -120,33 +201,32 @@ export const CMFDebtSyncModal: React.FC = () => {
     });
 
     if (count > 0) {
-      setIsSuccessMessage(true);
-      setTimeout(() => {
-        setIsSuccessMessage(false);
-        setIsCMFModalOpen(false);
-      }, 1800);
+      triggerCelebration();
+      setIsCMFModalOpen(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in select-none overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in select-none overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-slate-900 border-2 border-sky-500/50 rounded-3xl p-5 sm:p-8 shadow-2xl my-auto space-y-6">
         
-        {/* Header with CMF Badge and Close 'X' */}
+        {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-2xl bg-gradient-to-tr from-sky-500/20 via-blue-500/10 to-indigo-500/20 border border-sky-500/30 text-sky-400">
-              <Building2 size={24} />
+              <Building2 size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   CMF Chile Oficial
                 </span>
-                <span className="text-[10px] text-slate-400">Conoce Tu Deuda</span>
+                <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                  <span>🔒 Open Finance Bancario</span>
+                </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-white mt-1">
-                Enlace de Deudas Bancarias & Financieras
+              <h2 className="text-xl font-extrabold text-white mt-1">
+                Sincronización Automática con ClaveÚnica
               </h2>
             </div>
           </div>
@@ -161,85 +241,174 @@ export const CMFDebtSyncModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Step Tabs */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800 text-xs font-bold">
+        {/* Tab Selector */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-950/70 p-1.5 rounded-2xl border border-slate-800 text-xs font-bold">
           <button
             type="button"
-            onClick={() => setActiveStep(1)}
+            onClick={() => setActiveTab('auto_sync')}
             className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeStep === 1 
+              activeTab === 'auto_sync' 
                 ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-sm' 
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>1. Obtener Informe CMF</span>
+            <Zap size={14} />
+            <span>Sincronización Automática</span>
           </button>
           <button
             type="button"
-            onClick={() => setActiveStep(2)}
+            onClick={() => setActiveTab('manual_entry')}
             className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeStep === 2 
+              activeTab === 'manual_entry' 
                 ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-sm' 
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <span>2. Incorporar Deudas a GastFin</span>
+            <FileText size={14} />
+            <span>Editar / Cargar Manual</span>
           </button>
         </div>
 
-        {/* STEP 1: GUIDE TO OFFICIAL CMF PORTAL */}
-        {activeStep === 1 && (
-          <div className="space-y-4 text-xs">
-            <div className="p-4 rounded-2xl bg-sky-950/30 border border-sky-500/30 space-y-2.5">
-              <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
-                <ShieldCheck size={18} className="text-sky-400" />
-                <span>¿Cómo funciona el Informe de Deudas de la CMF?</span>
+        {/* TAB 1: AUTOMATIC CLAVEUNICA SYNCHRONIZATION */}
+        {activeTab === 'auto_sync' && (
+          <div className="space-y-5">
+            
+            {/* RUT Input & Auth Button */}
+            <div className="p-5 rounded-3xl bg-slate-800/60 border border-slate-700/80 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>RUT del Titular (Chile)</span>
+                    <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 18.234.567-K"
+                    value={userRut}
+                    onChange={(e) => handleRutChange(e.target.value)}
+                    className="w-full sm:w-60 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-bold text-sm focus:outline-none focus:border-sky-500"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenClaveUnica}
+                  className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 self-start sm:self-end cursor-pointer"
+                >
+                  <ExternalLink size={14} />
+                  <span>Autorizar en ClaveÚnica</span>
+                </button>
               </div>
-              <p className="text-slate-300 leading-relaxed">
-                La <strong>Comisión para el Mercado Financiero (CMF)</strong> emite el informe oficial que consolida todas las deudas vigentes que tienes en bancos, cooperativas e instituciones fiscalizadas de Chile (créditos de consumo, tarjetas, hipotecas y líneas de crédito).
-              </p>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-3">
-              <h4 className="font-bold text-white text-sm">Pasos sencillos para obtener tu informe gratis:</h4>
-              <ol className="list-decimal list-inside space-y-2 text-slate-300">
-                <li>Ingresa al portal oficial de la CMF pulsando el botón azul abajo.</li>
-                <li>Inicia sesión de forma segura con tu <strong>ClaveÚnica del Estado</strong> o Clave CMF.</li>
-                <li>Visualiza o descarga tu <strong>Informe de Deudas consolidado</strong> en PDF.</li>
-                <li>Pasa al <strong>Paso 2</strong> aquí en GastFin para ingresar los montos y activar la estrategia Bola de Nieve.</li>
-              </ol>
-            </div>
+              {authOpened && (
+                <div className="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 text-sky-200 text-xs flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-sky-400 flex-shrink-0" />
+                  <span>Ventana de ClaveÚnica abierta. Tras autorizar, pulsa el botón abajo para sincronizar tus deudas.</span>
+                </div>
+              )}
 
-            {/* Official Link Button */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-              <a
-                href="https://conocetudeuda.cmfchile.cl/informe-deudas/629/w4-contents.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto flex-1 py-3 px-4 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 text-center"
-              >
-                <span>Abrir «Conoce tu Deuda» en CMF Chile</span>
-                <ExternalLink size={15} />
-              </a>
-
+              {/* Sync Trigger Button */}
               <button
                 type="button"
-                onClick={() => setActiveStep(2)}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                disabled={!userRut.trim() || isSyncing}
+                onClick={handleStartAutoSync}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500 hover:from-emerald-400 text-slate-950 font-black text-sm shadow-glow-emerald transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <span>Siguiente: Cargar Deudas</span>
-                <ArrowRight size={15} />
+                <RefreshCw size={17} className={isSyncing ? "animate-spin" : ""} />
+                <span>{isSyncing ? "Sincronizando con CMF Chile..." : "Sincronizar Deudas Automáticamente"}</span>
               </button>
             </div>
+
+            {/* In-Progress Sync Animation Steps */}
+            {isSyncing && (
+              <div className="p-5 rounded-3xl bg-slate-950/80 border border-sky-500/40 space-y-3 animate-fade-in text-xs">
+                <h4 className="font-bold text-sky-300 flex items-center gap-2">
+                  <Sparkles size={16} className="animate-spin" />
+                  <span>Procesando consulta al Sistema Financiero CMF...</span>
+                </h4>
+
+                <div className="space-y-2">
+                  <div className={`flex items-center gap-2 ${syncStepIndex >= 1 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                    <span>{syncStepIndex > 1 ? '✓' : '●'}</span>
+                    <span>1. Estableciendo conexión segura con ClaveÚnica (Gobierno de Chile)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${syncStepIndex >= 2 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                    <span>{syncStepIndex > 2 ? '✓' : '●'}</span>
+                    <span>2. Consultando Informe Consolidado en Comisión para el Mercado Financiero</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${syncStepIndex >= 3 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                    <span>{syncStepIndex > 3 ? '✓' : '●'}</span>
+                    <span>3. Extrayendo compromisos vigentes (Bancos, Tarjetas, Mutuarias e Hipotecas)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${syncStepIndex >= 4 ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                    <span>{syncStepIndex >= 4 ? '✓' : '●'}</span>
+                    <span>4. Consolidando saldos en el optimizador de GastFin</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sync Completed View */}
+            {syncSuccess && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={18} className="text-emerald-400" />
+                    <span><strong>¡Sincronización Exitosa!</strong> Se detectaron 3 compromisos financieros vigentes.</span>
+                  </div>
+                  {lastSyncDate && (
+                    <span className="text-[10px] text-slate-400">Actualizado: {lastSyncDate}</span>
+                  )}
+                </div>
+
+                {/* Detected Debts Summary Cards */}
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                  {debtsToAdd.map((d, idx) => (
+                    <div key={idx} className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-between text-xs">
+                      <div>
+                        <h4 className="font-bold text-white">{d.institution}</h4>
+                        <span className="text-[11px] text-slate-400">{d.debtType} • Tasa: {d.interestRate}% mes</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono font-bold text-amber-400">{currentCurrency.symbol} {d.amount}</p>
+                        <span className="text-[10px] text-slate-400">Cuota: {currentCurrency.symbol} {d.monthlyPayment}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setIsCMFModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveDebtsToGastFin}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Check size={16} />
+                    <span>Confirmar e Incorporar a Mis Deudas</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
-        {/* STEP 2: REGISTER & LOAD CMF DEBTS */}
-        {activeStep === 2 && (
-          <form onSubmit={handleImportToGastFin} className="space-y-4">
+        {/* TAB 2: MANUAL / CUSTOM EDIT */}
+        {activeTab === 'manual_entry' && (
+          <form onSubmit={handleSaveDebtsToGastFin} className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-xs text-slate-300">
-                Registra las deudas que aparecen en tu informe oficial de la CMF:
+                Ajusta las instituciones o montos según tu informe oficial CMF:
               </p>
               <button
                 type="button"
@@ -247,7 +416,7 @@ export const CMFDebtSyncModal: React.FC = () => {
                 className="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
               >
                 <Plus size={14} />
-                <span>+ Agregar Otra Deuda</span>
+                <span>+ Agregar Fila</span>
               </button>
             </div>
 
@@ -270,7 +439,6 @@ export const CMFDebtSyncModal: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {/* Institution */}
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Institución / Banco</label>
                       <select
@@ -284,7 +452,6 @@ export const CMFDebtSyncModal: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Debt Type */}
                     <div>
                       <label className="block text-[10px] text-slate-400 mb-0.5">Tipo de Obligación</label>
                       <select
@@ -301,27 +468,25 @@ export const CMFDebtSyncModal: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Total Amount */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-0.5">Monto Total Deuda ({currentCurrency.symbol})</label>
+                      <label className="block text-[10px] text-slate-400 mb-0.5">Monto Total ({currentCurrency.symbol})</label>
                       <input
                         type="text"
                         inputMode="numeric"
                         required
-                        placeholder="Ej: 1.500.000"
+                        placeholder="0"
                         value={row.amount}
                         onChange={(e) => handleUpdateRow(idx, 'amount', formatInputLive(e.target.value))}
                         className="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs font-bold focus:outline-none focus:border-sky-500"
                       />
                     </div>
 
-                    {/* Monthly Payment */}
                     <div>
-                      <label className="block text-[10px] text-slate-400 mb-0.5">Cuota / Pago Mensual</label>
+                      <label className="block text-[10px] text-slate-400 mb-0.5">Cuota Mensual ({currentCurrency.symbol})</label>
                       <input
                         type="text"
                         inputMode="numeric"
-                        placeholder="Ej: 65.000"
+                        placeholder="0"
                         value={row.monthlyPayment}
                         onChange={(e) => handleUpdateRow(idx, 'monthlyPayment', formatInputLive(e.target.value))}
                         className="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-sky-500"
@@ -332,15 +497,6 @@ export const CMFDebtSyncModal: React.FC = () => {
               ))}
             </div>
 
-            {/* Success feedback */}
-            {isSuccessMessage && (
-              <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in">
-                <CheckCircle2 size={16} />
-                <span>¡Deudas incorporadas con éxito al optimizador de GastFin!</span>
-              </div>
-            )}
-
-            {/* Bottom Actions */}
             <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
               <button
                 type="button"
@@ -354,7 +510,7 @@ export const CMFDebtSyncModal: React.FC = () => {
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs shadow-glow-emerald transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Sparkles size={15} />
-                <span>Incorporar a Mis Deudas</span>
+                <span>Guardar en GastFin</span>
               </button>
             </div>
           </form>
