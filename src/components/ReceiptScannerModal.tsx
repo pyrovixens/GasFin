@@ -15,10 +15,12 @@ import {
   Camera,
   Eye,
   RefreshCw,
-  Layers
+  Layers,
+  Check
 } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 import { useFinancial } from '../context/FinancialContext';
+import { parseReceiptText, ParsedReceipt } from '../services/receiptParser';
 
 export const ReceiptScannerModal: React.FC = () => {
   const { 
@@ -46,6 +48,7 @@ export const ReceiptScannerModal: React.FC = () => {
     date: string;
     category: string;
     description: string;
+    detectedTotalLine?: string;
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,14 +73,14 @@ export const ReceiptScannerModal: React.FC = () => {
   const processRealOCR = async (imageSrc: string) => {
     setIsScanning(true);
     setScanProgress(0);
-    setProgressStatus('Cargando motor de reconocimiento OCR...');
+    setProgressStatus('Iniciando motor de reconocimiento óptico...');
     setScanResult(null);
     setExtractedRawText('');
 
     try {
       const result = await Tesseract.recognize(
         imageSrc,
-        'spa+eng', // Spanish & English recognition for receipts
+        'spa+eng', // Spanish & English recognition
         {
           logger: (m) => {
             if (m.status === 'recognizing text') {
@@ -92,220 +95,34 @@ export const ReceiptScannerModal: React.FC = () => {
 
       const fullText = result.data.text || '';
       setExtractedRawText(fullText);
-      parseExtractedReceipt(fullText);
+      
+      // Parse using trained golden TOTAL rule parser
+      const parsed: ParsedReceipt = parseReceiptText(fullText);
+      
+      setScanResult({
+        vendor: parsed.vendor,
+        amount: parsed.amount,
+        displayAmount: formatInputLive(parsed.amount),
+        date: parsed.date,
+        category: parsed.category,
+        description: parsed.description,
+        detectedTotalLine: parsed.detectedTotalLine
+      });
+
     } catch (err) {
       console.error('Error durante OCR:', err);
-      // Fallback simple parser
-      parseExtractedReceipt('');
+      const parsed = parseReceiptText('');
+      setScanResult({
+        vendor: parsed.vendor,
+        amount: parsed.amount,
+        displayAmount: formatInputLive(parsed.amount),
+        date: parsed.date,
+        category: parsed.category,
+        description: parsed.description
+      });
     } finally {
       setIsScanning(false);
     }
-  };
-
-  // Intelligent Parser of Real Extracted Text
-  const parseExtractedReceipt = (rawText: string) => {
-    const lines = rawText
-      .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-
-    let vendor = 'Comercio / Proveedor';
-    let amount = 0;
-    let date = new Date().toISOString().split('T')[0];
-    let category = 'Otros Gastos';
-
-    // 1. Vendor Name Detection (top non-trivial lines, ignoring common keywords)
-    const ignoreWords = /rut|boleta|factura|ticket|electronica|sii|giro|fecha|hora|caja|cajero|folio|atendido|bienvenido|gracias/i;
-    for (let i = 0; i < Math.min(lines.length, 6); i++) {
-      const line = lines[i];
-      if (line.length >= 3 && !/^\d+$/.test(line) && !ignoreWords.test(line)) {
-        const cleanVendor = line.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s.&-]/g, '').trim();
-        if (cleanVendor.length >= 3 && !/^\d+$/.test(cleanVendor)) {
-          vendor = cleanVendor;
-          break;
-        }
-      }
-    }
-
-    // 2. Real Date Detection (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
-    const dateRegex = /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})\b|\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/;
-    for (const line of lines) {
-      const match = line.match(dateRegex);
-      if (match) {
-        try {
-          if (match[1] && match[2] && match[3]) {
-            let day = parseInt(match[1], 10);
-            let month = parseInt(match[2], 10);
-            let year = parseInt(match[3], 10);
-            if (year < 100) year += 2000;
-            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-              date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              break;
-            }
-          } else if (match[4] && match[5] && match[6]) {
-            let year = parseInt(match[4], 10);
-            let month = parseInt(match[5], 10);
-            let day = parseInt(match[6], 10);
-            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-              date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              break;
-            }
-          }
-        } catch {
-          // ignore fallback
-        }
-      }
-    }
-
-    // 3. Real Total Amount Detection
-    // Priority: Lines with "TOTAL", "TOTAL A PAGAR", "MONTO TOTAL", "VALOR TOTAL", "IMPORTE"
-    const totalLineRegexes = [
-      /total\s*(?:a\s*pagar)?\s*[:$]?\s*([0-9.,]+)/i,
-      /monto\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
-      /valor\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
-      /importe\s*(?:total)?\s*[:$]?\s*([0-9.,]+)/i,
-      /pago\s*total\s*[:$]?\s*([0-9.,]+)/i,
-      /total\s*([0-9.,]+)/i
-    ];
-
-    let foundTotalAmount = 0;
-
-    for (const line of lines) {
-      for (const rx of totalLineRegexes) {
-        const m = line.match(rx);
-        if (m && m[1]) {
-          const numRaw = m[1].replace(/\./g, '').replace(/,/g, '.');
-          const parsed = parseFloat(numRaw);
-          if (!isNaN(parsed) && parsed > 0 && parsed < 100000000) {
-            foundTotalAmount = Math.round(parsed);
-            break;
-          }
-        }
-      }
-      if (foundTotalAmount > 0) break;
-    }
-
-    // Fallback: If no explicit TOTAL keyword, look for all numbers in the receipt and pick the most reasonable highest total
-    if (foundTotalAmount === 0) {
-      const numbers: number[] = [];
-      for (const line of lines) {
-        const matches = line.matchAll(/\$?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2})?|[0-9]+)/g);
-        for (const m of matches) {
-          const numStr = m[1].replace(/\./g, '').replace(/,/g, '.');
-          const val = parseFloat(numStr);
-          // filter out barcode numbers, rut or years
-          if (!isNaN(val) && val >= 100 && val < 50000000 && val !== 2024 && val !== 2025 && val !== 2026) {
-            numbers.push(Math.round(val));
-          }
-        }
-      }
-      if (numbers.length > 0) {
-        foundTotalAmount = Math.max(...numbers);
-      }
-    }
-
-    amount = foundTotalAmount;
-
-    // 4. Real Category Matching based on actual receipt contents
-    const lowerText = rawText.toLowerCase();
-    if (
-      lowerText.includes('super') || 
-      lowerText.includes('lider') || 
-      lowerText.includes('jumbo') || 
-      lowerText.includes('unimarc') || 
-      lowerText.includes('santa isabel') || 
-      lowerText.includes('tottus') || 
-      lowerText.includes('abarrotes') || 
-      lowerText.includes('panaderia') || 
-      lowerText.includes('lacteos') || 
-      lowerText.includes('carniceria') || 
-      lowerText.includes('verduras') || 
-      lowerText.includes('alimentos')
-    ) {
-      category = 'Supermercado & Alimentos';
-    } else if (
-      lowerText.includes('copec') || 
-      lowerText.includes('shell') || 
-      lowerText.includes('petrobras') || 
-      lowerText.includes('combustible') || 
-      lowerText.includes('gasolina') || 
-      lowerText.includes('diesel') || 
-      lowerText.includes('uber') || 
-      lowerText.includes('didi') || 
-      lowerText.includes('cabify') || 
-      lowerText.includes('estacionamiento') || 
-      lowerText.includes('metro') || 
-      lowerText.includes('autopista')
-    ) {
-      category = 'Transporte & Combustible';
-    } else if (
-      lowerText.includes('farmacia') || 
-      lowerText.includes('cruz verde') || 
-      lowerText.includes('ahumada') || 
-      lowerText.includes('salcobrand') || 
-      lowerText.includes('dr simi') || 
-      lowerText.includes('medicamento') || 
-      lowerText.includes('doctor') || 
-      lowerText.includes('clinica') || 
-      lowerText.includes('hospital') || 
-      lowerText.includes('dental')
-    ) {
-      category = 'Salud & Farmacia';
-    } else if (
-      lowerText.includes('restaurant') || 
-      lowerText.includes('cafe') || 
-      lowerText.includes('bar') || 
-      lowerText.includes('starbucks') || 
-      lowerText.includes('mcdonald') || 
-      lowerText.includes('burger') || 
-      lowerText.includes('pizza') || 
-      lowerText.includes('sushi') || 
-      lowerText.includes('pedidosya') || 
-      lowerText.includes('rappi') || 
-      lowerText.includes('uber eats')
-    ) {
-      category = 'Restaurantes & Ocio';
-    } else if (
-      lowerText.includes('enel') || 
-      lowerText.includes('cge') || 
-      lowerText.includes('luz') || 
-      lowerText.includes('aguas andinas') || 
-      lowerText.includes('esval') || 
-      lowerText.includes('essbio') || 
-      lowerText.includes('gasco') || 
-      lowerText.includes('lipigas') || 
-      lowerText.includes('abastible') || 
-      lowerText.includes('metrogas') || 
-      lowerText.includes('vtr') || 
-      lowerText.includes('movistar') || 
-      lowerText.includes('entel') || 
-      lowerText.includes('claro') || 
-      lowerText.includes('wom')
-    ) {
-      category = 'Servicios Básicos & Cuentas';
-    } else if (
-      lowerText.includes('falabella') || 
-      lowerText.includes('ripley') || 
-      lowerText.includes('paris') || 
-      lowerText.includes('h&m') || 
-      lowerText.includes('zara') || 
-      lowerText.includes('ropa') || 
-      lowerText.includes('calzado') || 
-      lowerText.includes('amazon') || 
-      lowerText.includes('aliexpress') || 
-      lowerText.includes('mercadolibre')
-    ) {
-      category = 'Compras & Tiendas';
-    }
-
-    setScanResult({
-      vendor: vendor || 'Comercio',
-      amount: amount || 0,
-      displayAmount: formatInputLive(amount || 0),
-      date,
-      category,
-      description: `Gasto en ${vendor || 'Comercio'}`
-    });
   };
 
   const handleConfirmAndSave = (e: React.FormEvent) => {
@@ -353,7 +170,7 @@ export const ReceiptScannerModal: React.FC = () => {
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Escaneo Real de Boleta o Factura
+            Escaneo de Boleta o Factura
           </h2>
 
           <p className="text-xs text-slate-400">
@@ -441,11 +258,17 @@ export const ReceiptScannerModal: React.FC = () => {
             {scanResult && !isScanning && (
               <form onSubmit={handleConfirmAndSave} className="space-y-3 pt-1">
                 
-                {/* Result Card */}
+                {/* Result Total Card */}
                 <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-semibold text-slate-300 block">Total detectado en boleta:</span>
-                    <span className="text-[10px] text-emerald-400 font-mono">Lectura óptica real</span>
+                    {scanResult.detectedTotalLine ? (
+                      <span className="text-[10px] text-emerald-400 font-mono truncate max-w-[200px] block">
+                        Línea: {scanResult.detectedTotalLine}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-400 font-mono">Lectura óptica directa</span>
+                    )}
                   </div>
                   <span className="font-black text-xl text-emerald-400 font-mono">
                     {formatMoney(scanResult.amount)}
