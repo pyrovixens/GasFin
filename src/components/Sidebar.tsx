@@ -20,7 +20,8 @@ import {
   Cloud, 
   Lock, 
   FileText,
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { ActiveView } from '../types';
