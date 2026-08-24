@@ -65,6 +65,10 @@ export const SettingsView: React.FC = () => {
   const [pinSavedStatus, setPinSavedStatus] = useState(false);
   const [isConfirmingClearAll, setIsConfirmingClearAll] = useState(false);
 
+  useEffect(() => {
+    setPinInput(userPIN || '');
+  }, [userPIN]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

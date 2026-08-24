@@ -30,6 +30,7 @@ import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { BankStatementImporterModal } from './components/BankStatementImporterModal';
 import { AssetModal } from './components/AssetModal';
 import { FinancialReportPrintModal } from './components/FinancialReportPrintModal';
+import { PinSetupPromptModal } from './components/PinSetupPromptModal';
 
 export const AppContent: React.FC = () => {
   const { activeView } = useFinancial();
@@ -97,6 +98,7 @@ export const AppContent: React.FC = () => {
       <DeficitAlertModal />
       <CurrencySetupModal />
       <AuthModal />
+      <PinSetupPromptModal />
 
       {/* Pro Suite Modals */}
       <CommandPaletteModal />

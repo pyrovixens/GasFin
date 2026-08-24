@@ -93,6 +93,10 @@ interface FinancialContextType {
   // Pro Suite: Security PIN
   userPIN: string | null;
   setUserPIN: (pin: string | null) => void;
+  isPinPromptOpen: boolean;
+  setIsPinPromptOpen: (open: boolean) => void;
+  savedAuthEmail: string;
+  setSavedAuthEmail: (email: string) => void;
   
   // User Profile & Personalized Greeting
   userName: string;
@@ -774,10 +778,25 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isCSVImporterOpen, setIsCSVImporterOpen] = useState(false);
   const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
 
-  // Pro Suite: Security PIN
+  // Pro Suite: Security PIN & Fast Access
   const [userPIN, setUserPINState] = useState<string | null>(() => {
     return localStorage.getItem('gastfin_user_pin_v1');
   });
+
+  const [isPinPromptOpen, setIsPinPromptOpen] = useState(false);
+
+  const [savedAuthEmail, setSavedAuthEmailState] = useState<string>(() => {
+    return localStorage.getItem('gastfin_saved_auth_email') || '';
+  });
+
+  const setSavedAuthEmail = (email: string) => {
+    setSavedAuthEmailState(email);
+    if (email) {
+      localStorage.setItem('gastfin_saved_auth_email', email);
+    } else {
+      localStorage.removeItem('gastfin_saved_auth_email');
+    }
+  };
 
   const setUserPIN = (pin: string | null) => {
     setUserPINState(pin);
@@ -1530,6 +1549,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsReportPrintModalOpen,
         userPIN,
         setUserPIN,
+        isPinPromptOpen,
+        setIsPinPromptOpen,
+        savedAuthEmail,
+        setSavedAuthEmail,
         clearAllDataToZero,
         resetToDemoData,
         exportDataAsJSON,

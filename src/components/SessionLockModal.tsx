@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Unlock, LogOut, Clock, Sparkles, Fingerprint, KeyRound, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Unlock, LogOut, Clock, KeyRound, AlertCircle } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
 export const SessionLockModal: React.FC = () => {
@@ -29,22 +29,9 @@ export const SessionLockModal: React.FC = () => {
     }
   };
 
-  const handleBiometricUnlock = async () => {
-    try {
-      if (window.PublicKeyCredential) {
-        // Biometric check supported
-        unlockSession();
-      } else {
-        unlockSession();
-      }
-    } catch {
-      unlockSession();
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-xl animate-fade-in select-none">
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
+      <div className="relative w-full max-w-md bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
         
         {/* Banking Security Shield Icon */}
         <div className="mx-auto relative w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500/20 via-teal-500/10 to-indigo-500/20 border border-emerald-500/30 flex items-center justify-center shadow-glow-emerald">
@@ -81,7 +68,10 @@ export const SessionLockModal: React.FC = () => {
                 pattern="\d{4}"
                 placeholder="••••"
                 value={enteredPin}
-                onChange={(e) => setEnteredPin(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => {
+                  setEnteredPin(e.target.value.replace(/\D/g, ''));
+                  setPinError(false);
+                }}
                 className="w-40 mx-auto px-4 py-2.5 rounded-2xl bg-slate-950 border border-slate-700 text-white font-mono font-black text-center text-2xl tracking-widest focus:outline-none focus:border-emerald-500"
               />
               {pinError && (
@@ -97,15 +87,6 @@ export const SessionLockModal: React.FC = () => {
               >
                 Desbloquear con PIN
               </button>
-
-              <button
-                type="button"
-                onClick={handleBiometricUnlock}
-                className="w-full py-2.5 px-4 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
-              >
-                <Fingerprint size={16} className="text-emerald-400" />
-                <span>Desbloquear con Touch ID / Biometría</span>
-              </button>
             </div>
           </form>
         ) : (
@@ -113,7 +94,7 @@ export const SessionLockModal: React.FC = () => {
           <div className="space-y-2.5 pt-2">
             <button
               type="button"
-              onClick={handleBiometricUnlock}
+              onClick={unlockSession}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-sm shadow-glow-emerald hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
             >
               <Unlock size={18} strokeWidth={2.5} />
