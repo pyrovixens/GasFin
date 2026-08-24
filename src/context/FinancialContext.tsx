@@ -41,6 +41,7 @@ import {
   deleteGoalFromSupabase, 
   syncBudgetToSupabase, 
   deleteBudgetFromSupabase, 
+  clearAllBudgetsFromSupabase,
   syncFullDatasetToSupabase 
 } from '../services/supabase';
 
@@ -299,6 +300,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
     try {
       // Purge all legacy stored budgets to start clean from 0
+      localStorage.removeItem('gastfin_budgets_v9');
       localStorage.removeItem('gastfin_budgets_v8');
       localStorage.removeItem('gastfin_budgets_v7');
       localStorage.removeItem('gastfin_budgets_v6');
@@ -306,11 +308,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.removeItem('gastfin_custom_budget_base_v7');
     } catch {}
 
-    const saved = localStorage.getItem('gastfin_budgets_v9');
+    const saved = localStorage.getItem('gastfin_budgets_v10');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
+          const total = parsed.reduce((acc: number, b: any) => acc + (b.limitAmount || 0), 0);
+          if (total === 1900000 && parsed.length >= 7) {
+            localStorage.removeItem('gastfin_budgets_v10');
+            return [];
+          }
           return parsed;
         }
       } catch {
@@ -360,7 +367,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (res.data.transactions.length > 0) setTransactions(res.data.transactions);
         if (res.data.debts.length > 0) setDebts(res.data.debts);
         if (res.data.goals.length > 0) setGoals(res.data.goals);
-        if (res.data.budgets.length > 0) setBudgets(res.data.budgets);
+        if (res.data.budgets.length > 0) {
+          const totalPreset = res.data.budgets.reduce((acc: number, b: any) => acc + (b.limit_amount || b.limitAmount || 0), 0);
+          if (totalPreset === 1900000 && res.data.budgets.length >= 7) {
+            clearAllBudgetsFromSupabase(userId);
+            setBudgets([]);
+          } else {
+            setBudgets(res.data.budgets);
+          }
+        }
         if (res.data.profile?.display_name) setUserName(res.data.profile.display_name);
       }
     } catch (e) {
@@ -510,12 +525,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const clearAllBudgets = () => {
     setBudgets([]);
+    localStorage.removeItem('gastfin_budgets_v10');
     localStorage.removeItem('gastfin_budgets_v9');
     localStorage.removeItem('gastfin_budgets_v8');
     localStorage.removeItem('gastfin_budgets_v7');
     localStorage.removeItem('gastfin_budgets_v6');
     localStorage.removeItem('gastfin_custom_budget_base');
     localStorage.removeItem('gastfin_custom_budget_base_v7');
+    if (supabaseUser) {
+      clearAllBudgetsFromSupabase(supabaseUser.id);
+    }
     triggerCelebration();
   };
 
@@ -550,7 +569,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [savingsTips]);
 
   useEffect(() => {
-    localStorage.setItem('gastfin_budgets_v9', JSON.stringify(budgets));
+    localStorage.setItem('gastfin_budgets_v10', JSON.stringify(budgets));
   }, [budgets]);
 
   useEffect(() => {

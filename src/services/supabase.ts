@@ -207,6 +207,15 @@ export const deleteBudgetFromSupabase = async (budgetId: string, userId: string)
   }
 };
 
+export const clearAllBudgetsFromSupabase = async (userId: string) => {
+  if (!userId) return;
+  try {
+    await supabase.from('budgets').delete().eq('user_id', userId);
+  } catch (e) {
+    console.warn('Supabase delete all budgets warning:', e);
+  }
+};
+
 export const syncFullDatasetToSupabase = async (
   userId: string,
   data: {
