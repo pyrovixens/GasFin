@@ -102,7 +102,7 @@ export const AuthModal: React.FC = () => {
           if (res.error?.includes('rate limit')) {
             setErrorMsg('Límite de solicitudes alcanzado. Por favor espera unos momentos.');
           } else {
-            setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu usuario/correo y contraseña.');
+            setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu correo electrónico y contraseña.');
           }
         } else {
           setSavedAuthEmail(cleanEmail);
@@ -177,7 +177,7 @@ export const AuthModal: React.FC = () => {
           <p className="text-xs text-slate-400">
             {authMode === 'pin'
               ? 'Ingresa tu PIN de 4 dígitos para acceder al instante.'
-              : 'Ingresa tu usuario/correo y contraseña para sincronizar tus finanzas.'}
+              : 'Ingresa tu correo electrónico y contraseña para acceder a tus finanzas.'}
           </p>
         </div>
 
@@ -193,7 +193,7 @@ export const AuthModal: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-400">Usuario / Correo:</span>
+                <span className="text-xs text-slate-400">Correo Electrónico:</span>
                 <span className="text-xs font-mono font-bold text-white truncate max-w-[200px]">
                   {supabaseUser.email}
                 </span>
@@ -285,7 +285,7 @@ export const AuthModal: React.FC = () => {
                 onClick={() => setAuthMode('login')}
                 className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer"
               >
-                O ingresar con usuario y contraseña completa
+                O ingresar con correo electrónico y contraseña
               </button>
             </div>
           </form>
@@ -339,9 +339,9 @@ export const AuthModal: React.FC = () => {
               </div>
             )}
 
-            {/* Email / Username */}
+            {/* Email */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">Correo Electrónico o Usuario</label>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Correo Electrónico</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
                 <input
