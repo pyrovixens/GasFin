@@ -56,13 +56,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
       setEmail(remembered);
     }
 
-    const effectivePin = userPIN || localStorage.getItem('gastfin_user_pin_v1');
-    if (effectivePin && remembered) {
-      setAuthMode('pin');
-    } else {
-      setAuthMode('login');
-    }
-  }, [isAuthModalOpen, isFullScreen, userPIN, savedAuthEmail, supabaseUser, userName]);
+    setAuthMode('login');
+  }, [isAuthModalOpen, isFullScreen, savedAuthEmail, supabaseUser, userName]);
 
   if (!isFullScreen && !isAuthModalOpen) return null;
 

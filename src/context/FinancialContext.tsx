@@ -602,9 +602,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (effectivePin) {
           setUserPINState(effectivePin);
           localStorage.setItem('gastfin_user_pin_v1', effectivePin);
-          sessionStorage.removeItem('gastfin_unlocked_current_session');
-          setIsSessionLocked(true);
         }
+        sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+        setIsSessionLocked(false);
+        setIsAuthModalOpen(false);
         triggerCelebration();
         return { success: true, hasPin: Boolean(effectivePin), pin: effectivePin };
       }
@@ -645,6 +647,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           displayName: displayName || userName,
           currency: currentCurrency.code,
         });
+        sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+        setIsSessionLocked(false);
+        setIsAuthModalOpen(false);
         triggerCelebration();
         return { success: true };
       }
