@@ -46,10 +46,8 @@ export const SessionLockModal: React.FC = () => {
     // Auto-unlock on 4th correct digit (Banking App standard UX)
     if (val.length === 4) {
       if (activePin && val === activePin) {
-        setTimeout(() => {
-          setEnteredPin('');
-          unlockSession();
-        }, 150);
+        setEnteredPin('');
+        unlockSession();
       } else {
         setPinError(true);
         setTimeout(() => {
