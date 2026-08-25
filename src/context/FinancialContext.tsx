@@ -549,10 +549,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           cloudPin = resolvedPin;
           setUserPINState(resolvedPin);
           localStorage.setItem('gastfin_user_pin_v1', resolvedPin);
-          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
-          if (unlockedThisSession !== 'true') {
-            setIsSessionLocked(true);
-          }
         }
 
         // Multi-device Assets sync
