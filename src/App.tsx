@@ -31,10 +31,37 @@ import { BankStatementImporterModal } from './components/BankStatementImporterMo
 import { AssetModal } from './components/AssetModal';
 import { FinancialReportPrintModal } from './components/FinancialReportPrintModal';
 import { PinSetupPromptModal } from './components/PinSetupPromptModal';
+import { Coins } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { activeView } = useFinancial();
+  const { activeView, supabaseUser, isAuthLoading } = useFinancial();
 
+  // 1. Initial Cloud Session Verification State
+  if (isAuthLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100 select-none">
+        <div className="text-center space-y-4 animate-fade-in p-6">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 mx-auto flex items-center justify-center shadow-glow-emerald">
+            <Coins size={32} className="text-slate-950 font-black animate-pulse" />
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-white">GastFin</h1>
+          <p className="text-xs text-slate-400 font-bold">Conectando a la Nube Segura...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated Gatekeeper: Strict Online Login / PIN Screen
+  if (!supabaseUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 selection:bg-emerald-500 selection:text-white">
+        <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/30 via-slate-950 to-slate-950" />
+        <AuthModal isFullScreen={true} />
+      </div>
+    );
+  }
+
+  // 3. Authenticated Application
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -97,7 +124,7 @@ export const AppContent: React.FC = () => {
       <GoalModal />
       <DeficitAlertModal />
       <CurrencySetupModal />
-      <AuthModal />
+      <AuthModal isFullScreen={false} />
       <PinSetupPromptModal />
 
       {/* Pro Suite Modals */}

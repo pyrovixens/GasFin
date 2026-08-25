@@ -108,6 +108,7 @@ interface FinancialContextType {
   // Supabase Cloud Sync & Multi-user
   supabaseUser: any;
   isCloudConnected: boolean;
+  isAuthLoading: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   loginWithSupabase: (email: string, password: string) => Promise<{ success: boolean; error?: string; hasPin: boolean; pin?: string | null }>;
@@ -408,6 +409,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Cloud Sync State
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // Modals and Drawers
@@ -504,6 +506,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     sessionStorage.removeItem('gastfin_unlocked_current_session');
     localStorage.removeItem('gastfin_last_active_time');
     setIsSessionLocked(false);
+    setTransactions([]);
+    setDebts([]);
+    setGoals([]);
+    setBudgets([]);
+    setAssets([]);
+    setSubscriptions([]);
     setActiveView('dashboard');
     setIsAuthModalOpen(true);
   };
@@ -1435,7 +1443,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSupabaseUser(session.user);
         setIsCloudConnected(true);
         loadCloudData(session.user.id);
+      } else {
+        setSupabaseUser(null);
+        setIsCloudConnected(false);
       }
+      setIsAuthLoading(false);
+    }).catch(() => {
+      setIsAuthLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -1447,6 +1461,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSupabaseUser(null);
         setIsCloudConnected(false);
       }
+      setIsAuthLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -1634,6 +1649,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         motivationalQuote,
         supabaseUser,
         isCloudConnected,
+        isAuthLoading,
         isAuthModalOpen,
         setIsAuthModalOpen,
         loginWithSupabase,
