@@ -382,6 +382,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (res.data.pin) {
           setUserPINState(res.data.pin);
           localStorage.setItem('gastfin_user_pin_v1', res.data.pin);
+          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
+          if (unlockedThisSession !== 'true') {
+            setIsSessionLocked(true);
+          }
         }
 
         // Multi-device Assets sync
@@ -644,16 +648,18 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
-  // Banking Session Security: Inactivity & Mobile Backgrounding Tracker (3-10 minutes)
+  // Banking Session Security: Inactivity & Multi-Device PIN Protection
   const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
-    // If PIN is active or user had a session, check if cold start / inactivity expired
     const savedPin = localStorage.getItem('gastfin_user_pin_v1');
+    const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
+    // If PIN is active and hasn't been entered in this tab/app session, start locked
+    if (savedPin && unlockedThisSession !== 'true') {
+      return true;
+    }
     const lastActive = localStorage.getItem('gastfin_last_active_time');
-    if (savedPin) {
-      if (!lastActive) return true;
+    if (savedPin && lastActive) {
       const elapsed = Date.now() - parseInt(lastActive, 10);
-      // If away for more than 3 minutes on startup, lock session
-      if (elapsed > 3 * 60 * 1000) return true;
+      if (elapsed > 2 * 60 * 1000) return true; // 2 minutes
     }
     return false;
   });
@@ -677,11 +683,18 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else {
         // App returned to foreground on mobile / tablet / PC
         const lastActive = localStorage.getItem('gastfin_last_active_time');
-        if (lastActive) {
-          const elapsed = Date.now() - parseInt(lastActive, 10);
-          // If backgrounded for more than 3 minutes, lock session automatically for security
-          if (elapsed > 3 * 60 * 1000) {
+        const savedPin = localStorage.getItem('gastfin_user_pin_v1') || userPIN;
+        if (savedPin) {
+          if (!lastActive) {
+            sessionStorage.removeItem('gastfin_unlocked_current_session');
             setIsSessionLocked(true);
+          } else {
+            const elapsed = Date.now() - parseInt(lastActive, 10);
+            // If backgrounded for more than 2 minutes on mobile, lock session automatically for security
+            if (elapsed > 2 * 60 * 1000) {
+              sessionStorage.removeItem('gastfin_unlocked_current_session');
+              setIsSessionLocked(true);
+            }
           }
         }
         recordActivity();
@@ -708,9 +721,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       window.removeEventListener('focus', handleVisibilityOrResume);
       window.removeEventListener('pageshow', handleVisibilityOrResume);
     };
-  }, []);
+  }, [userPIN]);
 
   const unlockSession = () => {
+    sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
     localStorage.setItem('gastfin_last_active_time', Date.now().toString());
     setIsSessionLocked(false);
     triggerCelebration();
@@ -720,6 +734,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (supabaseUser) {
       await logoutSupabase();
     }
+    sessionStorage.removeItem('gastfin_unlocked_current_session');
     localStorage.removeItem('gastfin_last_active_time');
     setIsSessionLocked(false);
     setActiveView('dashboard');
