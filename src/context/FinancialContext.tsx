@@ -549,6 +549,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           cloudPin = resolvedPin;
           setUserPINState(resolvedPin);
           localStorage.setItem('gastfin_user_pin_v1', resolvedPin);
+          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
+          if (unlockedThisSession !== 'true') {
+            setIsSessionLocked(true);
+          }
         }
 
         // Multi-device Assets sync
@@ -598,6 +602,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (effectivePin) {
           setUserPINState(effectivePin);
           localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+          sessionStorage.removeItem('gastfin_unlocked_current_session');
+          setIsSessionLocked(true);
         }
         triggerCelebration();
         return { success: true, hasPin: Boolean(effectivePin), pin: effectivePin };
@@ -1438,11 +1444,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Session & Auth State Listeners
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setSupabaseUser(session.user);
         setIsCloudConnected(true);
-        loadCloudData(session.user.id);
+        const cloudRes = await loadCloudData(session.user.id);
+        const effectivePin = cloudRes.pin || session.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
+        if (effectivePin) {
+          setUserPINState(effectivePin);
+          localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
+          if (unlockedThisSession !== 'true') {
+            setIsSessionLocked(true);
+          }
+        }
       } else {
         setSupabaseUser(null);
         setIsCloudConnected(false);
@@ -1452,11 +1467,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setIsAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setSupabaseUser(session.user);
         setIsCloudConnected(true);
-        loadCloudData(session.user.id);
+        const cloudRes = await loadCloudData(session.user.id);
+        const effectivePin = cloudRes.pin || session.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
+        if (effectivePin) {
+          setUserPINState(effectivePin);
+          localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+        }
       } else {
         setSupabaseUser(null);
         setIsCloudConnected(false);

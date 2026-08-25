@@ -27,8 +27,10 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
       supabase.auth.getUser(),
     ]);
 
-    const metadata = authRes.data?.user?.user_metadata || {};
-    const userPin: string | null = metadata.pin || profileRes.data?.pin_code || profileRes.data?.pin || null;
+    const sessionRes = await supabase.auth.getSession();
+    const sessionUser = sessionRes.data?.session?.user;
+    const metadata = authRes.data?.user?.user_metadata || sessionUser?.user_metadata || {};
+    const userPin: string | null = metadata.pin || profileRes.data?.pin_code || profileRes.data?.pin || profileRes.data?.pin_security || null;
     const userAssets: Asset[] = Array.isArray(metadata.assets) ? metadata.assets : [];
     const userSubscriptions: Subscription[] = Array.isArray(metadata.subscriptions) ? metadata.subscriptions : [];
 
@@ -252,7 +254,10 @@ export const syncUserMetadataToSupabase = async (
 
     const profilePayload: any = { id: userId, updated_at: new Date().toISOString() };
     if (meta.displayName !== undefined) profilePayload.display_name = meta.displayName;
-    if (meta.pin !== undefined) profilePayload.pin_code = meta.pin;
+    if (meta.pin !== undefined) {
+      profilePayload.pin_code = meta.pin;
+      profilePayload.pin = meta.pin;
+    }
     
     await supabase.from('profiles').upsert(profilePayload);
   } catch (e) {
