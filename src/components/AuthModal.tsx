@@ -7,12 +7,9 @@ import {
   X, 
   ArrowRight, 
   ShieldCheck, 
-  CheckCircle2, 
-  Coins,
-  RefreshCw
+  Coins
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
-import { supabase } from '../services/supabase';
 
 interface AuthModalProps {
   isFullScreen?: boolean;
@@ -23,19 +20,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     isAuthModalOpen, 
     setIsAuthModalOpen, 
     supabaseUser, 
-    setSupabaseUser,
-    setIsCloudConnected,
     loginWithSupabase, 
     signupWithSupabase, 
-    logoutSupabase,
-    syncLocalToCloud,
     userPIN,
-    savedAuthEmail,
-    setSavedAuthEmail,
-    userName,
     setUserName,
     triggerCelebration,
-    setIsSessionLocked,
     unlockApp
   } = useFinancial();
 
@@ -52,32 +41,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
 
   const effectivePin = userPIN || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_user_pin_v1') : null);
 
-  // Initialize mode and clean email (NO username defaults)
+  // Initialize: ALWAYS start email blank (let browser autofill natively if user saved it)
   useEffect(() => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setEnteredPin('');
+    setEmail(''); // Completely blank by default
     
-    // Only prefill if it is a valid email (contains @), NEVER a display name
-    const rememberedEmail = (savedAuthEmail && savedAuthEmail.includes('@'))
-      ? savedAuthEmail
-      : (supabaseUser?.email && supabaseUser.email.includes('@'))
-        ? supabaseUser.email
-        : '';
-        
-    setEmail(rememberedEmail);
-
-    // If device has a saved PIN and remembered email, start in PIN mode for quick access, otherwise login
-    if (effectivePin && rememberedEmail) {
+    if (effectivePin) {
       setAuthMode('pin');
     } else {
       setAuthMode('login');
     }
-  }, [isAuthModalOpen, isFullScreen, savedAuthEmail, supabaseUser]);
+  }, [isAuthModalOpen, isFullScreen, effectivePin]);
 
+  // If user is already authenticated in Supabase, do NOT show this modal
+  if (supabaseUser) return null;
   if (!isFullScreen && !isAuthModalOpen) return null;
 
-  // Handle Quick PIN Login: verifies PIN and directly unlocks WITHOUT asking for password
+  // Handle Quick PIN Login: verifies PIN and enters immediately without password
   const processPinCheck = (pinToTest: string) => {
     if (!effectivePin) return;
 
@@ -108,7 +90,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     }
   };
 
-  // Handle Email & Password Submit: logs in directly WITHOUT asking for PIN
+  // Handle Email & Password Submit: logs in directly without PIN
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -128,16 +110,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
             setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.');
           }
         } else {
-          setSavedAuthEmail(cleanEmail);
-          setSuccessMsg('¡Acceso concedido! Entrando al sistema...');
-          sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-          localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-          setIsSessionLocked(false);
+          setSuccessMsg('¡Acceso concedido! Entrando...');
+          unlockApp();
           triggerCelebration();
-          
-          setTimeout(() => {
-            setIsAuthModalOpen(false);
-          }, 350);
         }
       } else {
         // Signup
@@ -145,17 +120,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         if (!res.success) {
           setErrorMsg(res.error || 'Error al crear la cuenta financiera.');
         } else {
-          setSavedAuthEmail(cleanEmail);
           if (displayName.trim()) setUserName(displayName.trim());
-          setSuccessMsg('¡Cuenta creada con éxito! Bienvenido a GastFin.');
-          sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-          localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-          setIsSessionLocked(false);
+          setSuccessMsg('¡Cuenta creada con éxito! Bienvenido.');
+          unlockApp();
           triggerCelebration();
-          
-          setTimeout(() => {
-            setIsAuthModalOpen(false);
-          }, 350);
         }
       }
     } catch (err: any) {
@@ -196,13 +164,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         </div>
 
         <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-          {supabaseUser 
-            ? 'Estado de Cuenta Activo' 
-            : authMode === 'pin' 
-              ? 'Acceso Rápido con PIN' 
-              : authMode === 'login' 
-                ? 'Iniciar Sesión' 
-                : 'Crear Cuenta Financiera'}
+          {authMode === 'pin' 
+            ? 'Acceso Rápido con PIN' 
+            : authMode === 'login' 
+              ? 'Iniciar Sesión' 
+              : 'Crear Cuenta Financiera'}
         </h2>
 
         <p className="text-xs text-slate-400">
@@ -212,61 +178,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         </p>
       </div>
 
-      {/* If Already Logged In */}
-      {supabaseUser ? (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Estado de Seguridad:</span>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400">
-                <CheckCircle2 size={14} />
-                <span>Sesión Protegida y Activa</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Titular de Cuenta:</span>
-              <span className="text-xs font-mono font-bold text-white truncate max-w-[200px]">
-                {supabaseUser.email}
-              </span>
-            </div>
-            {effectivePin && (
-              <div className="flex items-center justify-between pt-1 border-t border-slate-800">
-                <span className="text-xs text-slate-400">Acceso Rápido:</span>
-                <span className="text-xs font-bold text-emerald-300">PIN de 4 dígitos configurado</span>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                syncLocalToCloud();
-                triggerCelebration();
-              }}
-              className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-slate-700"
-            >
-              <RefreshCw size={14} className="text-emerald-400" />
-              <span>Actualizar Estado de Cuenta</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={logoutSupabase}
-              className="w-full py-2.5 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-rose-500/30"
-            >
-              <span>Cerrar Sesión</span>
-            </button>
-          </div>
-        </div>
-      ) : authMode === 'pin' ? (
+      {authMode === 'pin' ? (
         
         /* ---------------- MODE 1: QUICK PIN LOGIN (NO PASSWORD PROMPT) ---------------- */
         <form onSubmit={handlePinLogin} className="space-y-4">
           <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-300 truncate">
               <User size={15} className="text-emerald-400 flex-shrink-0" />
-              <span className="font-bold truncate">{savedAuthEmail || (email.includes('@') ? email : 'Usuario Registrado')}</span>
+              <span className="font-bold truncate">Usuario con PIN Configurado</span>
             </div>
             <button
               type="button"
@@ -362,7 +281,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Mi Nombre o Empresa"
+                  placeholder="Ingresa tu nombre o empresa..."
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
@@ -371,7 +290,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
             </div>
           )}
 
-          {/* Email */}
+          {/* Email: Completely Blank by Default */}
           <div>
             <label className="block text-[11px] font-bold text-slate-300 mb-1">Correo Electrónico</label>
             <div className="relative">
@@ -379,6 +298,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
               <input
                 type="email"
                 required
+                autoComplete="email"
                 placeholder="tu@correo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -396,6 +316,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
                 type="password"
                 required
                 minLength={6}
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

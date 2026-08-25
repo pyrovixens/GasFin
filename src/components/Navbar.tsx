@@ -109,16 +109,14 @@ export const Navbar: React.FC = () => {
           </button>
         )}
 
-        {/* Banking Security Status */}
-        <button
-          type="button"
-          onClick={() => setIsAuthModalOpen(true)}
-          className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+        {/* Banking Security Status Badge */}
+        <div
+          className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm flex items-center gap-1.5 flex-shrink-0 select-none"
           title="Sesión Segura Activa"
         >
           <ShieldCheck size={14} className="text-emerald-400" />
           <span className="hidden 2xl:inline text-[11px]">Segura</span>
-        </button>
+        </div>
 
         {/* OCR Receipt Scanner */}
         <button
