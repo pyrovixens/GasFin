@@ -25,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     loadCloudData,
     loginWithSupabase, 
     signupWithSupabase, 
+    fullSignOut,
     userPIN,
     savedAuthEmail,
     setUserName,
@@ -60,8 +61,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     }
   }, [isAuthModalOpen, isFullScreen, effectivePin]);
 
-  // If user is already authenticated in Supabase and app is unlocked, do NOT render
-  if (supabaseUser) return null;
   if (!isFullScreen && !isAuthModalOpen) return null;
 
   // Handle Quick PIN Login: verifies PIN, loads cloud data, and enters immediately
@@ -206,7 +205,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
             </div>
             <button
               type="button"
-              onClick={() => setAuthMode('login')}
+              onClick={async () => {
+                await fullSignOut();
+                setAuthMode('login');
+                setErrorMsg(null);
+              }}
               className="text-[11px] text-emerald-400 hover:underline font-bold flex-shrink-0 ml-2 cursor-pointer"
             >
               Cambiar
@@ -249,7 +252,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
 
             <button
               type="button"
-              onClick={() => { setAuthMode('login'); setErrorMsg(null); }}
+              onClick={async () => { 
+                await fullSignOut(); 
+                setAuthMode('login'); 
+                setErrorMsg(null); 
+              }}
               className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <Mail size={13} className="text-emerald-400" />

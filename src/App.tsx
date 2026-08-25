@@ -51,8 +51,8 @@ export const AppContent: React.FC = () => {
     );
   }
 
-  // 2. Unauthenticated Gatekeeper: Secure Banking Login
-  if (!supabaseUser && !isAppUnlocked) {
+  // 2. Unauthenticated / Locked Gatekeeper: Secure Banking Login
+  if (!isAppUnlocked) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 selection:bg-emerald-500 selection:text-white">
         <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/25 via-slate-950 to-slate-950" />

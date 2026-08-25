@@ -188,6 +188,7 @@ interface FinancialContextType {
   isSessionLocked: boolean;
   unlockSession: () => void;
   logoutUser: () => void;
+  fullSignOut: () => Promise<void>;
 
   isDebtModalOpen: boolean;
   openDebtModal: (debt?: Debt) => void;
@@ -498,12 +499,23 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     triggerCelebration();
   };
 
-  const logoutUser = async () => {
-    if (supabaseUser) {
-      await logoutSupabase();
-    }
+  const logoutUser = () => {
     sessionStorage.removeItem('gastfin_unlocked_current_session');
     localStorage.removeItem('gastfin_last_active_time');
+    setIsAppUnlocked(false);
+    setIsSessionLocked(false);
+    setIsAuthModalOpen(true);
+    setActiveView('dashboard');
+  };
+
+  const fullSignOut = async () => {
+    await logoutSupabase();
+    sessionStorage.removeItem('gastfin_unlocked_current_session');
+    localStorage.removeItem('gastfin_last_active_time');
+    localStorage.removeItem('gastfin_user_pin_v1');
+    localStorage.removeItem('gastfin_saved_auth_email');
+    setUserPINState(null);
+    setSavedAuthEmailState('');
     setIsAppUnlocked(false);
     setIsSessionLocked(false);
     setTransactions([]);
@@ -1821,6 +1833,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isSessionLocked,
         unlockSession,
         logoutUser,
+        fullSignOut,
         isPrivacyMode,
         togglePrivacyMode,
         assets,
