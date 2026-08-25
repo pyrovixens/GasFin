@@ -192,6 +192,8 @@ interface FinancialContextType {
   isGoalModalOpen: boolean;
   openGoalModal: (goal?: Goal) => void;
   closeGoalModal: () => void;
+  editingGoal: Goal | null;
+
   // Scheduled Payments & Reminders / Gastos Programados
   scheduledPayments: ScheduledPayment[];
   addScheduledPayment: (payment: Omit<ScheduledPayment, 'id' | 'createdAt'>) => void;
@@ -214,35 +216,36 @@ interface FinancialContextType {
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // User name
+  // ==========================================
+  // 1. ALL USE_STATE HOOKS (TOP LEVEL ORDER)
+  // ==========================================
+
+  // User Identity & PIN
   const [userName, setUserNameState] = useState<string>(() => {
     return localStorage.getItem('gastfin_user_name_v6') || '';
   });
 
-  const setUserName = (name: string) => {
-    setUserNameState(name);
-    localStorage.setItem('gastfin_user_name_v6', name);
-  };
+  const [savedAuthEmail, setSavedAuthEmailState] = useState<string>(() => {
+    return localStorage.getItem('gastfin_saved_auth_email') || '';
+  });
 
-  // Motivational quote of the session
-  const motivationalQuote = useMemo(() => {
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
-    return MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length];
-  }, []);
+  const [userPIN, setUserPINState] = useState<string | null>(() => {
+    return localStorage.getItem('gastfin_user_pin_v1');
+  });
 
-  // Theme state
+  const [isPinPromptOpen, setIsPinPromptOpen] = useState<boolean>(false);
+
+  // Navigation, Theme & Security UI
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('gastfin_theme_v6');
     return saved !== null ? JSON.parse(saved) : true;
   });
 
-  // Sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem('gastfin_sidebar_v6');
     return saved !== null ? JSON.parse(saved) : false;
   });
 
-  // Active View with URL Hash and LocalStorage persistence so refresh keeps the exact view
   const [activeView, setActiveViewState] = useState<ActiveView>(() => {
     try {
       const hash = window.location.hash.replace('#', '') as ActiveView;
@@ -261,28 +264,38 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return 'dashboard';
   });
 
-  const setActiveView = (view: ActiveView) => {
-    setActiveViewState(view);
-    try {
-      localStorage.setItem('gastfin_active_view_v1', view);
-      window.history.replaceState(null, '', `#${view}`);
-    } catch {}
-  };
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
+    return localStorage.getItem('gastfin_privacy_v1') === 'true';
+  });
 
-  // Currency & Lock state
+  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
+    const savedPin = localStorage.getItem('gastfin_user_pin_v1');
+    const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
+    if (savedPin && unlockedThisSession !== 'true') {
+      return true;
+    }
+    const lastActive = localStorage.getItem('gastfin_last_active_time');
+    if (savedPin && lastActive) {
+      const elapsed = Date.now() - parseInt(lastActive, 10);
+      if (elapsed > 2 * 60 * 1000) return true;
+    }
+    return false;
+  });
+
+  // Currency configuration
   const [currentCurrency, setCurrentCurrency] = useState<CurrencyConfig>(() => {
     const savedCode = localStorage.getItem('gastfin_currency_v6');
     const found = SUPPORTED_CURRENCIES.find(c => c.code === savedCode);
-    return found || SUPPORTED_CURRENCIES[0]; // Default CLP/USD
+    return found || SUPPORTED_CURRENCIES[0];
   });
 
   const [isCurrencySetupModalOpen, setIsCurrencySetupModalOpen] = useState<boolean>(() => {
     const isLocked = localStorage.getItem('gastfin_curr_locked_v6');
     const savedName = localStorage.getItem('gastfin_user_name_v6');
-    return isLocked !== 'true' || !savedName; // Open on first launch to ask user for alias & currency
+    return isLocked !== 'true' || !savedName;
   });
 
-  // Data collections
+  // Data Collections
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('gastfin_tx_v6');
     return saved ? JSON.parse(saved) : [];
@@ -300,7 +313,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [budgets, setBudgets] = useState<CategoryBudget[]>(() => {
     try {
-      // Purge all legacy stored budgets to start clean from 0
       localStorage.removeItem('gastfin_budgets_v9');
       localStorage.removeItem('gastfin_budgets_v8');
       localStorage.removeItem('gastfin_budgets_v7');
@@ -328,9 +340,45 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return [];
   });
 
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    try {
+      const stored = localStorage.getItem('gastfin_assets_v1');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
+    try {
+      const stored = localStorage.getItem('gastfin_subscriptions_v1');
+      return stored ? JSON.parse(stored) : [
+        {
+          id: 'sub-netflix',
+          name: 'Netflix Premium 4K',
+          amount: 11990,
+          billingCycle: 'monthly',
+          renewalDay: 15,
+          category: 'Streaming & Ocio',
+          active: true
+        },
+        {
+          id: 'sub-spotify',
+          name: 'Spotify Familiar',
+          amount: 6490,
+          billingCycle: 'monthly',
+          renewalDay: 5,
+          category: 'Streaming & Ocio',
+          active: true
+        }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>(() => {
     try {
-      // Purge any legacy sample data stored in the browser
       localStorage.removeItem('gastfin_scheduled_payments_v6');
     } catch {}
 
@@ -339,7 +387,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Exclude any legacy mock ids to guarantee a 100% clean start from 0
           return parsed.filter((p: any) => p && !['sp-1', 'sp-2', 'sp-3', 'sp-4'].includes(p.id));
         }
       } catch {
@@ -349,18 +396,124 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return [];
   });
 
+  const [savingsTips, setSavingsTips] = useState<SavingsTip[]>(() => {
+    const saved = localStorage.getItem('gastfin_tips_v6');
+    return saved ? JSON.parse(saved) : INITIAL_SAVINGS_TIPS;
+  });
+
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
     return getNotificationPermission();
   });
 
-  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
-  
-  // Supabase Cloud Sync State
+  // Cloud Sync State
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
-  // Load cloud data helper
+  // Modals and Drawers
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState<boolean>(false);
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
+  const [isTransactionMinimized, setIsTransactionMinimized] = useState<boolean>(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState<boolean>(false);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState<boolean>(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState<boolean>(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [isDeficitModalOpen, setIsDeficitModalOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isCSVImporterOpen, setIsCSVImporterOpen] = useState<boolean>(false);
+  const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState<boolean>(false);
+
+  // ==========================================
+  // 2. HELPER FUNCTIONS & SETTERS
+  // ==========================================
+
+  const triggerCelebration = () => {
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#10B981', '#6366F1', '#3B82F6', '#F59E0B', '#EC4899']
+      });
+    } catch {}
+  };
+
+  const setUserName = (name: string) => {
+    setUserNameState(name);
+    localStorage.setItem('gastfin_user_name_v6', name);
+  };
+
+  const setSavedAuthEmail = (email: string) => {
+    setSavedAuthEmailState(email);
+    if (email) {
+      localStorage.setItem('gastfin_saved_auth_email', email);
+    } else {
+      localStorage.removeItem('gastfin_saved_auth_email');
+    }
+  };
+
+  const setUserPIN = (pin: string | null) => {
+    setUserPINState(pin);
+    if (pin) {
+      localStorage.setItem('gastfin_user_pin_v1', pin);
+    } else {
+      localStorage.removeItem('gastfin_user_pin_v1');
+    }
+    if (supabaseUser) {
+      syncUserMetadataToSupabase(supabaseUser.id, { pin });
+    }
+  };
+
+  const setActiveView = (view: ActiveView) => {
+    setActiveViewState(view);
+    try {
+      localStorage.setItem('gastfin_active_view_v1', view);
+      window.history.replaceState(null, '', `#${view}`);
+    } catch {}
+  };
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => !prev);
+  };
+
+  const togglePrivacyMode = () => {
+    setIsPrivacyMode(prev => {
+      const next = !prev;
+      localStorage.setItem('gastfin_privacy_v1', String(next));
+      return next;
+    });
+  };
+
+  const unlockSession = () => {
+    sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+    localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+    setIsSessionLocked(false);
+    triggerCelebration();
+  };
+
+  const logoutUser = async () => {
+    if (supabaseUser) {
+      await logoutSupabase();
+    }
+    sessionStorage.removeItem('gastfin_unlocked_current_session');
+    localStorage.removeItem('gastfin_last_active_time');
+    setIsSessionLocked(false);
+    setActiveView('dashboard');
+    setIsAuthModalOpen(true);
+  };
+
+  const motivationalQuote = useMemo(() => {
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+    return MOTIVATIONAL_QUOTES[dayOfYear % MOTIVATIONAL_QUOTES.length];
+  }, []);
+
+  // ==========================================
+  // 3. CLOUD LOAD & SYNC FUNCTIONS
+  // ==========================================
+
   const loadCloudData = async (userId: string) => {
     try {
       const res = await fetchUserDataFromSupabase(userId);
@@ -421,38 +574,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        setIsCloudConnected(true);
-        loadCloudData(session.user.id);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        setIsCloudConnected(true);
-        loadCloudData(session.user.id);
-      } else {
-        setSupabaseUser(null);
-        setIsCloudConnected(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Realtime multi-device sync
-  useEffect(() => {
-    if (!supabaseUser?.id) return;
-    const unsubscribe = subscribeToUserRealtimeChanges(supabaseUser.id, () => {
-      loadCloudData(supabaseUser.id);
-    });
-    return () => unsubscribe();
-  }, [supabaseUser]);
-
   const loginWithSupabase = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -490,7 +611,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSupabaseUser(data.user);
         setIsCloudConnected(true);
         if (displayName) setUserName(displayName);
-        // Upload initial local data to the newly created user account
         await syncFullDatasetToSupabase(data.user.id, {
           transactions,
           debts,
@@ -533,291 +653,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     triggerCelebration();
   };
 
-  const [savingsTips, setSavingsTips] = useState<SavingsTip[]>(() => {
-    const saved = localStorage.getItem('gastfin_tips_v6');
-    return saved ? JSON.parse(saved) : INITIAL_SAVINGS_TIPS;
-  });
-
-  const addBudget = (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => {
-    const newB: CategoryBudget = {
-      ...budget,
-      id: `b-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setBudgets(prev => [...prev.filter(b => b.category !== budget.category), newB]);
-    if (supabaseUser) syncBudgetToSupabase(newB, supabaseUser.id);
-    triggerCelebration();
-  };
-
-  const updateBudget = (id: string, updates: Partial<Omit<CategoryBudget, 'id' | 'createdAt'>> | number) => {
-    setBudgets(prev => prev.map(b => {
-      if (b.id === id) {
-        const updated = typeof updates === 'number' ? { ...b, limitAmount: updates } : { ...b, ...updates };
-        if (supabaseUser) syncBudgetToSupabase(updated, supabaseUser.id);
-        return updated;
-      }
-      return b;
-    }));
-  };
-
-  const deleteBudget = (idOrCategory: string) => {
-    if (!idOrCategory) return;
-    const normalized = idOrCategory.trim().toLowerCase();
-    setBudgets(prev => {
-      const updated = prev.filter(b => 
-        b.id !== idOrCategory && 
-        b.category !== idOrCategory && 
-        b.category.trim().toLowerCase() !== normalized
-      );
-      try {
-        localStorage.setItem('gastfin_budgets_v9', JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-    if (supabaseUser) deleteBudgetFromSupabase(idOrCategory, supabaseUser.id);
-  };
-
-  const clearAllBudgets = () => {
-    setBudgets([]);
-    localStorage.removeItem('gastfin_budgets_v10');
-    localStorage.removeItem('gastfin_budgets_v9');
-    localStorage.removeItem('gastfin_budgets_v8');
-    localStorage.removeItem('gastfin_budgets_v7');
-    localStorage.removeItem('gastfin_budgets_v6');
-    localStorage.removeItem('gastfin_custom_budget_base');
-    localStorage.removeItem('gastfin_custom_budget_base_v7');
-    if (supabaseUser) {
-      clearAllBudgetsFromSupabase(supabaseUser.id);
-    }
-    triggerCelebration();
-  };
-
-  // Modals state
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [isTransactionMinimized, setIsTransactionMinimized] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-
-  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
-  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
-
-  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
-
-  const [isDeficitModalOpen, setIsDeficitModalOpen] = useState(false);
-
-  // Sync with LocalStorage
-  useEffect(() => {
-    localStorage.setItem('gastfin_tx_v6', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_debts_v6', JSON.stringify(debts));
-  }, [debts]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_goals_v6', JSON.stringify(goals));
-  }, [goals]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_tips_v6', JSON.stringify(savingsTips));
-  }, [savingsTips]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_budgets_v10', JSON.stringify(budgets));
-  }, [budgets]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_scheduled_payments_v7', JSON.stringify(scheduledPayments));
-  }, [scheduledPayments]);
-
-  // Check scheduled payments on mount or data changes to send push reminders
-  useEffect(() => {
-    checkAndTriggerPaymentNotifications();
-    // Also check periodically every hour while the app is active
-    const timer = setInterval(() => {
-      checkAndTriggerPaymentNotifications();
-    }, 60 * 60 * 1000);
-    return () => clearInterval(timer);
-  }, [scheduledPayments]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_currency_v6', currentCurrency.code);
-  }, [currentCurrency]);
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
-  }, [isSidebarCollapsed]);
-
-  // Banking Session Security: Inactivity & Multi-Device PIN Protection
-  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
-    const savedPin = localStorage.getItem('gastfin_user_pin_v1');
-    const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
-    // If PIN is active and hasn't been entered in this tab/app session, start locked
-    if (savedPin && unlockedThisSession !== 'true') {
-      return true;
-    }
-    const lastActive = localStorage.getItem('gastfin_last_active_time');
-    if (savedPin && lastActive) {
-      const elapsed = Date.now() - parseInt(lastActive, 10);
-      if (elapsed > 2 * 60 * 1000) return true; // 2 minutes
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    let timeoutId: any = null;
-    const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes of continuous inactivity
-
-    const recordActivity = () => {
-      localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        setIsSessionLocked(true);
-      }, INACTIVITY_TIMEOUT_MS);
-    };
-
-    // Handle Smartphone App Minimize / Tab Switch / Backgrounding
-    const handleVisibilityOrResume = () => {
-      if (document.hidden) {
-        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-      } else {
-        // App returned to foreground on mobile / tablet / PC
-        const lastActive = localStorage.getItem('gastfin_last_active_time');
-        const savedPin = localStorage.getItem('gastfin_user_pin_v1') || userPIN;
-        if (savedPin) {
-          if (!lastActive) {
-            sessionStorage.removeItem('gastfin_unlocked_current_session');
-            setIsSessionLocked(true);
-          } else {
-            const elapsed = Date.now() - parseInt(lastActive, 10);
-            // If backgrounded for more than 2 minutes on mobile, lock session automatically for security
-            if (elapsed > 2 * 60 * 1000) {
-              sessionStorage.removeItem('gastfin_unlocked_current_session');
-              setIsSessionLocked(true);
-            }
-          }
-        }
-        recordActivity();
-      }
-    };
-
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchend', 'scroll', 'click'];
-    activityEvents.forEach(evt => {
-      window.addEventListener(evt, recordActivity, { passive: true });
-    });
-
-    document.addEventListener('visibilitychange', handleVisibilityOrResume);
-    window.addEventListener('focus', handleVisibilityOrResume);
-    window.addEventListener('pageshow', handleVisibilityOrResume);
-
-    recordActivity();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      activityEvents.forEach(evt => {
-        window.removeEventListener(evt, recordActivity);
-      });
-      document.removeEventListener('visibilitychange', handleVisibilityOrResume);
-      window.removeEventListener('focus', handleVisibilityOrResume);
-      window.removeEventListener('pageshow', handleVisibilityOrResume);
-    };
-  }, [userPIN]);
-
-  const unlockSession = () => {
-    sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-    localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-    setIsSessionLocked(false);
-    triggerCelebration();
-  };
-
-  const logoutUser = async () => {
-    if (supabaseUser) {
-      await logoutSupabase();
-    }
-    sessionStorage.removeItem('gastfin_unlocked_current_session');
-    localStorage.removeItem('gastfin_last_active_time');
-    setIsSessionLocked(false);
-    setActiveView('dashboard');
-    setIsAuthModalOpen(true);
-  };
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_theme_v6', JSON.stringify(isDarkMode));
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
-  };
-
-  const setCurrency = (code: string) => {
-    const found = SUPPORTED_CURRENCIES.find(c => c.code === code);
-    if (found) setCurrentCurrency(found);
-  };
-
-  const lockAndSetCurrencyAndName = (code: string, name: string) => {
-    const found = SUPPORTED_CURRENCIES.find(c => c.code === code);
-    if (found) {
-      setCurrentCurrency(found);
-      localStorage.setItem('gastfin_currency_v6', found.code);
-      localStorage.setItem('gastfin_curr_locked_v6', 'true');
-      const cleanName = name.trim() || 'Usuario';
-      setUserName(cleanName);
-      setIsCurrencySetupModalOpen(false);
-      triggerCelebration();
-    }
-  };
-
-  const unlockCurrencySelector = () => {
-    localStorage.removeItem('gastfin_curr_locked_v6');
-    setIsCurrencySetupModalOpen(true);
-  };
-
-  const triggerCelebration = () => {
-    try {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#10B981', '#6366F1', '#3B82F6', '#F59E0B', '#EC4899']
-      });
-    } catch {
-      // ignore
-    }
-  };
-
-  // Pro Suite: Stealth Privacy Mode
-  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
-    return localStorage.getItem('gastfin_privacy_v1') === 'true';
-  });
-
-  const togglePrivacyMode = () => {
-    setIsPrivacyMode(prev => {
-      const next = !prev;
-      localStorage.setItem('gastfin_privacy_v1', String(next));
-      return next;
-    });
-  };
-
-  // Pro Suite: Net Worth & Assets
-  const [assets, setAssets] = useState<Asset[]>(() => {
-    try {
-      const stored = localStorage.getItem('gastfin_assets_v1');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_assets_v1', JSON.stringify(assets));
-  }, [assets]);
+  // ==========================================
+  // 4. ENTITY MUTATIONS (ASSETS, SUBSCRIPTIONS, BUDGETS, ETC)
+  // ==========================================
 
   const addAsset = (asset: Omit<Asset, 'id'>) => {
     const newAsset: Asset = { ...asset, id: `asset-${Date.now()}` };
@@ -845,9 +683,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
-  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-
   const openAssetModal = (asset?: Asset) => {
     setEditingAsset(asset || null);
     setIsAssetModalOpen(true);
@@ -857,39 +692,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setEditingAsset(null);
     setIsAssetModalOpen(false);
   };
-
-  // Pro Suite: Subscriptions Radar
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
-    try {
-      const stored = localStorage.getItem('gastfin_subscriptions_v1');
-      return stored ? JSON.parse(stored) : [
-        {
-          id: 'sub-netflix',
-          name: 'Netflix Premium 4K',
-          amount: 11990,
-          billingCycle: 'monthly',
-          renewalDay: 15,
-          category: 'Streaming & Ocio',
-          active: true
-        },
-        {
-          id: 'sub-spotify',
-          name: 'Spotify Familiar',
-          amount: 6490,
-          billingCycle: 'monthly',
-          renewalDay: 5,
-          category: 'Streaming & Ocio',
-          active: true
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('gastfin_subscriptions_v1', JSON.stringify(subscriptions));
-  }, [subscriptions]);
 
   const addSubscription = (sub: Omit<Subscription, 'id'>) => {
     const newSub: Subscription = { ...sub, id: `sub-${Date.now()}` };
@@ -924,65 +726,82 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
-  // Pro Suite: Command Palette & Modals
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isCSVImporterOpen, setIsCSVImporterOpen] = useState(false);
-  const [isReportPrintModalOpen, setIsReportPrintModalOpen] = useState(false);
-
-  // Pro Suite: Security PIN & Fast Access
-  const [userPIN, setUserPINState] = useState<string | null>(() => {
-    return localStorage.getItem('gastfin_user_pin_v1');
-  });
-
-  const [isPinPromptOpen, setIsPinPromptOpen] = useState(false);
-
-  const [savedAuthEmail, setSavedAuthEmailState] = useState<string>(() => {
-    return localStorage.getItem('gastfin_saved_auth_email') || '';
-  });
-
-  const setSavedAuthEmail = (email: string) => {
-    setSavedAuthEmailState(email);
-    if (email) {
-      localStorage.setItem('gastfin_saved_auth_email', email);
-    } else {
-      localStorage.removeItem('gastfin_saved_auth_email');
-    }
-  };
-
-  const setUserPIN = (pin: string | null) => {
-    setUserPINState(pin);
-    if (pin) {
-      localStorage.setItem('gastfin_user_pin_v1', pin);
-    } else {
-      localStorage.removeItem('gastfin_user_pin_v1');
-    }
-    if (supabaseUser) {
-      syncUserMetadataToSupabase(supabaseUser.id, { pin });
-    }
-  };
-
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K or Ctrl+K -> Command Palette
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsCommandPaletteOpen(prev => !prev);
-      }
-      // Shift+P -> Privacy mode toggle
-      if (e.shiftKey && e.key.toUpperCase() === 'P') {
-        const target = e.target as HTMLElement;
-        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-          return;
-        }
-        e.preventDefault();
-        togglePrivacyMode();
-      }
+  const addBudget = (budget: Omit<CategoryBudget, 'id' | 'createdAt'>) => {
+    const newB: CategoryBudget = {
+      ...budget,
+      id: `b-${Date.now()}`,
+      createdAt: new Date().toISOString(),
     };
+    setBudgets(prev => [...prev.filter(b => b.category !== budget.category), newB]);
+    if (supabaseUser) syncBudgetToSupabase(newB, supabaseUser.id);
+    triggerCelebration();
+  };
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  const updateBudget = (id: string, updates: Partial<Omit<CategoryBudget, 'id' | 'createdAt'>> | number) => {
+    setBudgets(prev => prev.map(b => {
+      if (b.id === id) {
+        const updated = typeof updates === 'number' ? { ...b, limitAmount: updates } : { ...b, ...updates };
+        if (supabaseUser) syncBudgetToSupabase(updated, supabaseUser.id);
+        return updated;
+      }
+      return b;
+    }));
+  };
+
+  const deleteBudget = (idOrCategory: string) => {
+    if (!idOrCategory) return;
+    const normalized = idOrCategory.trim().toLowerCase();
+    setBudgets(prev => {
+      const updated = prev.filter(b => 
+        b.id !== idOrCategory && 
+        b.category !== idOrCategory && 
+        b.category.trim().toLowerCase() !== normalized
+      );
+      try {
+        localStorage.setItem('gastfin_budgets_v10', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    if (supabaseUser) deleteBudgetFromSupabase(idOrCategory, supabaseUser.id);
+  };
+
+  const clearAllBudgets = () => {
+    setBudgets([]);
+    localStorage.removeItem('gastfin_budgets_v10');
+    localStorage.removeItem('gastfin_budgets_v9');
+    localStorage.removeItem('gastfin_budgets_v8');
+    localStorage.removeItem('gastfin_budgets_v7');
+    localStorage.removeItem('gastfin_budgets_v6');
+    localStorage.removeItem('gastfin_custom_budget_base');
+    localStorage.removeItem('gastfin_custom_budget_base_v7');
+    if (supabaseUser) {
+      clearAllBudgetsFromSupabase(supabaseUser.id);
+    }
+    triggerCelebration();
+  };
+
+  const setCurrency = (code: string) => {
+    const found = SUPPORTED_CURRENCIES.find(c => c.code === code);
+    if (found) setCurrentCurrency(found);
+  };
+
+  const lockAndSetCurrencyAndName = (code: string, name: string) => {
+    const found = SUPPORTED_CURRENCIES.find(c => c.code === code);
+    if (found) {
+      setCurrentCurrency(found);
+      localStorage.setItem('gastfin_currency_v6', found.code);
+      localStorage.setItem('gastfin_curr_locked_v6', 'true');
+      const cleanName = name.trim() || 'Usuario';
+      setUserName(cleanName);
+      setIsCurrencySetupModalOpen(false);
+      triggerCelebration();
+    }
+  };
+
+  const unlockCurrencySelector = () => {
+    localStorage.removeItem('gastfin_curr_locked_v6');
+    setIsCurrencySetupModalOpen(true);
+  };
 
   // Custom Amount Formatter with Stealth Privacy Mask
   const formatMoney = (amount: number | undefined | null, overrideSymbol?: string) => {
@@ -1304,7 +1123,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const dueMidnight = new Date(pYear, pMonth - 1, pDay).getTime();
       const diffDays = Math.ceil((dueMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
 
-      // If due within the configured notification window (e.g. <= 5 days before, and not far in the past)
       if (diffDays <= (p.notifyDaysBefore ?? 5) && diffDays >= 0) {
         if (!hasPaymentBeenNotifiedToday(p.id)) {
           const daysText = diffDays === 0 ? '¡VENCE HOY!' : `Vence en ${diffDays} ${diffDays === 1 ? 'día' : 'días'} (${p.dueDate})`;
@@ -1390,7 +1208,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (p.recurrence === 'once') {
         return { ...p, status: 'paid', lastPaidDate: new Date().toISOString().split('T')[0] };
       }
-      // If recurring (monthly/biweekly/weekly/yearly), advance the dueDate to the next cycle
       const [y, m, d] = p.dueDate.split('-').map(Number);
       const nextDate = new Date(y, m - 1, d);
       if (p.recurrence === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
@@ -1417,10 +1234,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSavingsTips([]);
     setScheduledPayments([]);
     setBudgets([]);
-    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
-    localStorage.removeItem(STORAGE_KEYS.DEBTS);
-    localStorage.removeItem(STORAGE_KEYS.GOALS);
-    localStorage.removeItem(STORAGE_KEYS.SAVINGS_TIPS);
+    localStorage.removeItem('gastfin_tx_v6');
+    localStorage.removeItem('gastfin_debts_v6');
+    localStorage.removeItem('gastfin_goals_v6');
+    localStorage.removeItem('gastfin_tips_v6');
+    localStorage.removeItem('gastfin_budgets_v10');
+    localStorage.removeItem('gastfin_budgets_v9');
+    localStorage.removeItem('gastfin_budgets_v8');
     localStorage.removeItem('gastfin_budgets_v7');
     localStorage.removeItem('gastfin_budgets_v6');
     localStorage.removeItem('gastfin_custom_budget_base');
@@ -1455,18 +1275,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     downloadAnchor.remove();
   };
 
-  // Export to Excel / CSV with UTF-8 BOM
   const exportDataToExcel = () => {
     const lines: string[] = [];
 
-    // Header & User Info
     lines.push(`REPORTE FINANCIERO EJECUTIVO - GASTFIN`);
     lines.push(`Usuario:;${userName || 'Usuario'}`);
     lines.push(`Fecha de Exportación:;${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`);
     lines.push(`Moneda Principal:;${currentCurrency.code} (${currentCurrency.name})`);
     lines.push(``);
 
-    // Executive KPI Summary
     lines.push(`RESUMEN GENERAL`);
     lines.push(`Métrica;Monto / Valor`);
     lines.push(`Ingresos Totales;${metrics.totalIncome}`);
@@ -1477,18 +1294,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     lines.push(`Cuotas Mínimas Mensuales;${metrics.monthlyDebtObligation}`);
     lines.push(``);
 
-    // CSV Formula Injection & Quotes Sanitizer
     const sanitizeCsvField = (val: string | number | undefined | null): string => {
       if (val === undefined || val === null) return '""';
       let str = String(val).replace(/"/g, '""');
-      // Escape leading formula characters (=, +, -, @, tab, CR)
       if (/^[=+\-@\t\r]/.test(str)) {
         str = `'${str}`;
       }
       return `"${str}"`;
     };
 
-    // Transactions Table
     lines.push(`LIBRO DE INGRESOS Y GASTOS`);
     lines.push(`ID;Tipo;Fecha;Hora;Concepto;Categoría;Monto;Método de Pago;Estado`);
     transactions.forEach(t => {
@@ -1496,7 +1310,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
     lines.push(``);
 
-    // Debts Table
     lines.push(`REGISTRO DE DEUDAS`);
     lines.push(`ID;Nombre / Crédito;Acreedor;Saldo Pendiente;Tasa APR (%);Cuota Mínima;Fecha Límite`);
     debts.forEach(d => {
@@ -1504,7 +1317,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
     lines.push(``);
 
-    // Goals Table
     lines.push(`METAS Y FONDOS FINANCIEROS`);
     lines.push(`ID;Meta;Monto Objetivo;Ahorro Actual;% Progreso;Fecha Límite`);
     goals.forEach(g => {
@@ -1596,6 +1408,187 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return false;
     }
   };
+
+  // ==========================================
+  // 5. ALL USE_EFFECT HOOKS
+  // ==========================================
+
+  // Session & Auth State Listeners
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        setIsCloudConnected(true);
+        loadCloudData(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setSupabaseUser(session.user);
+        setIsCloudConnected(true);
+        loadCloudData(session.user.id);
+      } else {
+        setSupabaseUser(null);
+        setIsCloudConnected(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Realtime multi-device sync
+  useEffect(() => {
+    if (!supabaseUser?.id) return;
+    const unsubscribe = subscribeToUserRealtimeChanges(supabaseUser.id, () => {
+      loadCloudData(supabaseUser.id);
+    });
+    return () => unsubscribe();
+  }, [supabaseUser]);
+
+  // Sync with LocalStorage
+  useEffect(() => {
+    localStorage.setItem('gastfin_tx_v6', JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_debts_v6', JSON.stringify(debts));
+  }, [debts]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_goals_v6', JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_tips_v6', JSON.stringify(savingsTips));
+  }, [savingsTips]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_budgets_v10', JSON.stringify(budgets));
+  }, [budgets]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_assets_v1', JSON.stringify(assets));
+  }, [assets]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_subscriptions_v1', JSON.stringify(subscriptions));
+  }, [subscriptions]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_scheduled_payments_v7', JSON.stringify(scheduledPayments));
+  }, [scheduledPayments]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_currency_v6', currentCurrency.code);
+  }, [currentCurrency]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem('gastfin_theme_v6', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    }
+  }, [isDarkMode]);
+
+  // Check scheduled payments on mount or data changes
+  useEffect(() => {
+    checkAndTriggerPaymentNotifications();
+    const timer = setInterval(() => {
+      checkAndTriggerPaymentNotifications();
+    }, 60 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [scheduledPayments]);
+
+  // Banking Session Security: Inactivity & Multi-Device PIN Protection
+  useEffect(() => {
+    let timeoutId: any = null;
+    const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes of continuous inactivity
+
+    const recordActivity = () => {
+      localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsSessionLocked(true);
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    // Handle Smartphone App Minimize / Tab Switch / Backgrounding
+    const handleVisibilityOrResume = () => {
+      if (document.hidden) {
+        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+      } else {
+        const lastActive = localStorage.getItem('gastfin_last_active_time');
+        const savedPin = localStorage.getItem('gastfin_user_pin_v1');
+        if (savedPin) {
+          if (!lastActive) {
+            sessionStorage.removeItem('gastfin_unlocked_current_session');
+            setIsSessionLocked(true);
+          } else {
+            const elapsed = Date.now() - parseInt(lastActive, 10);
+            if (elapsed > 2 * 60 * 1000) {
+              sessionStorage.removeItem('gastfin_unlocked_current_session');
+              setIsSessionLocked(true);
+            }
+          }
+        }
+        recordActivity();
+      }
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchend', 'scroll', 'click'];
+    activityEvents.forEach(evt => {
+      window.addEventListener(evt, recordActivity, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', handleVisibilityOrResume);
+    window.addEventListener('focus', handleVisibilityOrResume);
+    window.addEventListener('pageshow', handleVisibilityOrResume);
+
+    recordActivity();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(evt => {
+        window.removeEventListener(evt, recordActivity);
+      });
+      document.removeEventListener('visibilitychange', handleVisibilityOrResume);
+      window.removeEventListener('focus', handleVisibilityOrResume);
+      window.removeEventListener('pageshow', handleVisibilityOrResume);
+    };
+  }, []);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+      if (e.shiftKey && e.key.toUpperCase() === 'P') {
+        const target = e.target as HTMLElement;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        togglePrivacyMode();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // ==========================================
+  // 6. PROVIDER RENDER
+  // ==========================================
 
   return (
     <FinancialContext.Provider
