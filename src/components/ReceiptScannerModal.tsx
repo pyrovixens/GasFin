@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { 
   Scan, 
+  ChevronLeft,
   Upload, 
   Sparkles, 
   CheckCircle2, 
@@ -153,11 +154,22 @@ export const ReceiptScannerModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto select-none">
       <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-7 shadow-2xl shadow-emerald-950/60 my-auto text-slate-100 space-y-4">
         
-        {/* Close Button */}
+        {/* Back / Close Buttons */}
+        <button
+          type="button"
+          onClick={() => { setIsReceiptScannerOpen(false); setImagePreview(null); setScanResult(null); }}
+          className="absolute top-4 left-4 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+          title="Volver"
+        >
+          <ChevronLeft size={18} className="text-emerald-400" />
+          <span className="hidden sm:inline">Volver</span>
+        </button>
+
         <button
           type="button"
           onClick={() => { setIsReceiptScannerOpen(false); setImagePreview(null); setScanResult(null); }}
           className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+          title="Cerrar"
         >
           <X size={18} />
         </button>

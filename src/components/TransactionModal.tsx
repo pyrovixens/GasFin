@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
+  ChevronLeft,
   Minus, 
   Maximize2, 
   ArrowUpRight, 
@@ -246,8 +247,15 @@ export const TransactionModal: React.FC = () => {
         className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/80 cursor-move select-none"
         title="Arrastra para mover la ventana a tu gusto"
       >
-        <div className="flex items-center gap-2">
-          <Move size={14} className="text-slate-400" />
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={closeTransactionModal}
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Volver"
+          >
+            <ChevronLeft size={16} className="text-emerald-400" />
+          </button>
           <span className="font-black text-xs text-white uppercase tracking-wider">
             {editingTransaction ? 'Editar Registro' : (type === 'income' ? 'Ingreso' : 'Gasto')}
           </span>

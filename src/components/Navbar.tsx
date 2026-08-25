@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
   Menu, 
+  ChevronLeft,
   Sun, 
   Moon, 
   ShieldAlert, 
@@ -21,6 +22,7 @@ import { useFinancial } from '../context/FinancialContext';
 export const Navbar: React.FC = () => {
   const { 
     activeView, 
+    setActiveView,
     isDarkMode, 
     toggleDarkMode, 
     isPrivacyMode,
@@ -64,8 +66,20 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-20 bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-5 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
-      {/* Title Section (with human text and no icon overlap) */}
-      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-shrink">
+      {/* Title Section with Subtle Back Arrow */}
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-shrink">
+        {activeView !== 'dashboard' && (
+          <button
+            type="button"
+            onClick={() => setActiveView('dashboard')}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 flex-shrink-0 cursor-pointer shadow-sm group active:scale-95"
+            title="Volver al Resumen Principal"
+          >
+            <ChevronLeft size={16} className="text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+            <span className="hidden sm:inline text-xs font-bold">Volver</span>
+          </button>
+        )}
+
         <button
           onClick={() => setIsSidebarCollapsed(prev => !prev)}
           className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white md:hidden flex-shrink-0"

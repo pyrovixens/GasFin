@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Download, X, FileText, CheckCircle2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Printer, ChevronLeft, Download, X, FileText, CheckCircle2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
 export const FinancialReportPrintModal: React.FC = () => {
@@ -48,6 +48,14 @@ export const FinancialReportPrintModal: React.FC = () => {
         {/* Modal Top Control Bar (Hidden on print) */}
         <div className="p-4 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between print:hidden">
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsReportPrintModalOpen(false)}
+              className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Volver"
+            >
+              <ChevronLeft size={18} className="text-emerald-400" />
+            </button>
             <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               <FileText size={18} />
             </div>

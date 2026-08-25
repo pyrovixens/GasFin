@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { 
   Upload, 
+  ChevronLeft,
   FileSpreadsheet, 
   CheckCircle2, 
   AlertCircle, 
   X, 
   ArrowRight, 
   Sparkles, 
-  Check,
-  Building2,
-  Filter
+  Check, 
+  Building2, 
+  Filter 
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { TransactionType } from '../types';
@@ -188,7 +189,15 @@ export const BankStatementImporterModal: React.FC = () => {
         
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsCSVImporterOpen(false)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer transition-colors"
+              title="Volver"
+            >
+              <ChevronLeft size={18} className="text-emerald-400" />
+            </button>
             <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
               <FileSpreadsheet size={24} />
             </div>

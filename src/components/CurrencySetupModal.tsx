@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coins, Sparkles, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Coins, ChevronLeft, X, Sparkles, User, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../data/initialData';
 
@@ -19,22 +19,33 @@ export const CurrencySetupModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = inputName.trim() || 'Usuario';
-    lockAndSetCurrencyAndName(selectedCurrencyCode, finalName);
+    if (!inputName.trim()) return;
+    lockAndSetCurrencyAndName(selectedCurrencyCode, inputName.trim());
+    setIsCurrencySetupModalOpen(false);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-lg bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-emerald-950/50 my-auto">
         
-        {/* Top-right close X */}
+        {/* Back / Close Buttons */}
+        <button
+          type="button"
+          onClick={() => setIsCurrencySetupModalOpen(false)}
+          className="absolute top-4 left-4 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+          title="Volver"
+        >
+          <ChevronLeft size={18} className="text-emerald-400" />
+          <span className="hidden sm:inline">Volver</span>
+        </button>
+
         <button
           type="button"
           onClick={() => setIsCurrencySetupModalOpen(false)}
           className="absolute top-4 right-4 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
           title="Cerrar ventana"
         >
-          ✕
+          <X size={18} />
         </button>
 
         {/* Top Badge & Header */}

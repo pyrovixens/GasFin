@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Target } from 'lucide-react';
+import { X, ChevronLeft, Target } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Goal, GoalCategory } from '../types';
 
@@ -20,20 +20,18 @@ export const GoalModal: React.FC = () => {
   const [rawTarget, setRawTarget] = useState<number>(0);
   const [displayCurrent, setDisplayCurrent] = useState('');
   const [rawCurrent, setRawCurrent] = useState<number>(0);
-  const [targetDate, setTargetDate] = useState('2026-12-31');
-  const [category, setCategory] = useState<GoalCategory>('emergency_fund');
+  const [targetDate, setTargetDate] = useState('');
+  const [category, setCategory] = useState<GoalCategory>('savings');
   const [color, setColor] = useState('#10B981');
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (editingGoal) {
       setTitle(editingGoal.title);
-      const safeTarget = editingGoal.targetAmount ?? 0;
-      setRawTarget(safeTarget);
-      setDisplayTarget(formatInputLive(safeTarget));
-      const safeCurrent = editingGoal.currentAmount ?? 0;
-      setRawCurrent(safeCurrent);
-      setDisplayCurrent(formatInputLive(safeCurrent));
+      setRawTarget(editingGoal.targetAmount);
+      setDisplayTarget(formatInputLive(editingGoal.targetAmount));
+      setRawCurrent(editingGoal.currentAmount);
+      setDisplayCurrent(formatInputLive(editingGoal.currentAmount));
       setTargetDate(editingGoal.targetDate);
       setCategory(editingGoal.category);
       setColor(editingGoal.color);
@@ -44,12 +42,12 @@ export const GoalModal: React.FC = () => {
       setDisplayTarget('');
       setRawCurrent(0);
       setDisplayCurrent('');
-      setTargetDate('2026-12-31');
-      setCategory('emergency_fund');
+      setTargetDate('');
+      setCategory('savings');
       setColor('#10B981');
       setNotes('');
     }
-  }, [editingGoal, isGoalModalOpen, currentCurrency.code]);
+  }, [editingGoal, isGoalModalOpen]);
 
   if (!isGoalModalOpen) return null;
 
@@ -86,7 +84,15 @@ export const GoalModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={closeGoalModal}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Volver"
+            >
+              <ChevronLeft size={18} className="text-emerald-400" />
+            </button>
             <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-400">
               <Target size={20} />
             </div>
@@ -94,10 +100,10 @@ export const GoalModal: React.FC = () => {
               <h3 className="text-base font-bold text-white">
                 {editingGoal ? 'Editar Meta' : 'Crear Meta Financiera'}
               </h3>
-              <p className="text-xs text-slate-400">Planifica tus fondos de reserva e inversiones</p>
+              <p className="text-xs text-slate-400">Define tu objetivo y fecha estimada</p>
             </div>
           </div>
-          <button onClick={closeGoalModal} className="p-1 rounded-lg text-slate-400 hover:text-white">
+          <button onClick={closeGoalModal} className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer" title="Cerrar">
             <X size={18} />
           </button>
         </div>

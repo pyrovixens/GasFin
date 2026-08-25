@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, DollarSign, Building2, Car, Home, Wallet, Sparkles } from 'lucide-react';
+import { X, ChevronLeft, TrendingUp, DollarSign, Building2, Car, Home, Wallet, Sparkles } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Asset, AssetCategory } from '../types';
 
@@ -19,6 +19,7 @@ export const AssetModal: React.FC = () => {
   const [category, setCategory] = useState<AssetCategory>('bank');
   const [institution, setInstitution] = useState('');
   const [displayValue, setDisplayValue] = useState('');
+  const [rawValue, setRawValue] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -26,12 +27,14 @@ export const AssetModal: React.FC = () => {
       setName(editingAsset.name);
       setCategory(editingAsset.category);
       setInstitution(editingAsset.institution || '');
+      setRawValue(editingAsset.value);
       setDisplayValue(formatInputLive(editingAsset.value));
       setNotes(editingAsset.notes || '');
     } else {
       setName('');
       setCategory('bank');
       setInstitution('');
+      setRawValue(0);
       setDisplayValue('');
       setNotes('');
     }
@@ -41,15 +44,14 @@ export const AssetModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const rawVal = parseRawFromDisplay(displayValue);
-    if (rawVal <= 0 || !name.trim()) return;
+    if (rawValue <= 0 || !name.trim()) return;
 
     if (editingAsset) {
       updateAsset(editingAsset.id, {
         name: name.trim(),
         category,
         institution: institution.trim() || undefined,
-        value: rawVal,
+        value: rawValue,
         notes: notes.trim() || undefined,
         updatedAt: new Date().toISOString()
       });
@@ -58,7 +60,7 @@ export const AssetModal: React.FC = () => {
         name: name.trim(),
         category,
         institution: institution.trim() || undefined,
-        value: rawVal,
+        value: rawValue,
         notes: notes.trim() || undefined,
         updatedAt: new Date().toISOString()
       });
@@ -73,7 +75,15 @@ export const AssetModal: React.FC = () => {
         
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAssetModalOpen(false)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer transition-colors"
+              title="Volver"
+            >
+              <ChevronLeft size={18} className="text-emerald-400" />
+            </button>
             <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
               <TrendingUp size={24} />
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, ShieldCheck } from 'lucide-react';
+import { X, ChevronLeft, CreditCard, ShieldCheck } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { Debt, DebtCategory } from '../types';
 
@@ -92,7 +92,15 @@ export const DebtModal: React.FC = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={closeDebtModal}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Volver"
+            >
+              <ChevronLeft size={18} className="text-emerald-400" />
+            </button>
             <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
               <CreditCard size={20} />
             </div>
@@ -103,7 +111,7 @@ export const DebtModal: React.FC = () => {
               <p className="text-xs text-slate-400">Datos para el cálculo óptimo de amortización</p>
             </div>
           </div>
-          <button onClick={closeDebtModal} className="p-1 rounded-lg text-slate-400 hover:text-white">
+          <button onClick={closeDebtModal} className="p-1 rounded-lg text-slate-400 hover:text-white" title="Cerrar">
             <X size={18} />
           </button>
         </div>
