@@ -644,36 +644,74 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     localStorage.setItem('gastfin_sidebar_v6', JSON.stringify(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
-  // Banking Session Security: Inactivity Tracker (15 minutes)
-  const [isSessionLocked, setIsSessionLocked] = useState(false);
+  // Banking Session Security: Inactivity & Mobile Backgrounding Tracker (3-10 minutes)
+  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
+    // If PIN is active or user had a session, check if cold start / inactivity expired
+    const savedPin = localStorage.getItem('gastfin_user_pin_v1');
+    const lastActive = localStorage.getItem('gastfin_last_active_time');
+    if (savedPin) {
+      if (!lastActive) return true;
+      const elapsed = Date.now() - parseInt(lastActive, 10);
+      // If away for more than 3 minutes on startup, lock session
+      if (elapsed > 3 * 60 * 1000) return true;
+    }
+    return false;
+  });
 
   useEffect(() => {
     let timeoutId: any = null;
-    const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of inactivity
+    const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes of continuous inactivity
 
-    const resetTimer = () => {
+    const recordActivity = () => {
+      localStorage.setItem('gastfin_last_active_time', Date.now().toString());
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         setIsSessionLocked(true);
       }, INACTIVITY_TIMEOUT_MS);
     };
 
-    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    // Handle Smartphone App Minimize / Tab Switch / Backgrounding
+    const handleVisibilityOrResume = () => {
+      if (document.hidden) {
+        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+      } else {
+        // App returned to foreground on mobile / tablet / PC
+        const lastActive = localStorage.getItem('gastfin_last_active_time');
+        if (lastActive) {
+          const elapsed = Date.now() - parseInt(lastActive, 10);
+          // If backgrounded for more than 3 minutes, lock session automatically for security
+          if (elapsed > 3 * 60 * 1000) {
+            setIsSessionLocked(true);
+          }
+        }
+        recordActivity();
+      }
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'touchend', 'scroll', 'click'];
     activityEvents.forEach(evt => {
-      window.addEventListener(evt, resetTimer, { passive: true });
+      window.addEventListener(evt, recordActivity, { passive: true });
     });
 
-    resetTimer();
+    document.addEventListener('visibilitychange', handleVisibilityOrResume);
+    window.addEventListener('focus', handleVisibilityOrResume);
+    window.addEventListener('pageshow', handleVisibilityOrResume);
+
+    recordActivity();
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       activityEvents.forEach(evt => {
-        window.removeEventListener(evt, resetTimer);
+        window.removeEventListener(evt, recordActivity);
       });
+      document.removeEventListener('visibilitychange', handleVisibilityOrResume);
+      window.removeEventListener('focus', handleVisibilityOrResume);
+      window.removeEventListener('pageshow', handleVisibilityOrResume);
     };
   }, []);
 
   const unlockSession = () => {
+    localStorage.setItem('gastfin_last_active_time', Date.now().toString());
     setIsSessionLocked(false);
     triggerCelebration();
   };
@@ -682,6 +720,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (supabaseUser) {
       await logoutSupabase();
     }
+    localStorage.removeItem('gastfin_last_active_time');
     setIsSessionLocked(false);
     setActiveView('dashboard');
     setIsAuthModalOpen(true);
