@@ -35,7 +35,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     userName,
     setUserName,
     triggerCelebration,
-    setIsSessionLocked
+    setIsSessionLocked,
+    unlockApp
   } = useFinancial();
 
   // Mode: 'pin' (if configured), 'login' (email + password), 'signup' (create account)
@@ -77,32 +78,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
   if (!isFullScreen && !isAuthModalOpen) return null;
 
   // Handle Quick PIN Login: verifies PIN and directly unlocks WITHOUT asking for password
-  const processPinCheck = async (pinToTest: string) => {
+  const processPinCheck = (pinToTest: string) => {
     if (!effectivePin) return;
 
     if (pinToTest === effectivePin) {
       setErrorMsg(null);
       setSuccessMsg('¡PIN verificado! Accediendo...');
-      
-      // If there is an existing session in supabase client, restore user state
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
-          setSupabaseUser(data.session.user);
-          setIsCloudConnected(true);
-        } else {
-          const cachedEmail = savedAuthEmail || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_saved_auth_email_v1') : '') || 'ganphotografic@hotmail.com';
-          setSupabaseUser({ id: 'local_authenticated_user', email: cachedEmail });
-        }
-      } catch {
-        const cachedEmail = savedAuthEmail || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_saved_auth_email_v1') : '') || 'ganphotografic@hotmail.com';
-        setSupabaseUser({ id: 'local_authenticated_user', email: cachedEmail });
-      }
-
-      sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-      localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-      setIsSessionLocked(false);
-      setIsAuthModalOpen(false);
+      unlockApp();
       triggerCelebration();
     } else {
       setErrorMsg('PIN incorrecto. Intenta de nuevo o ingresa con contraseña.');

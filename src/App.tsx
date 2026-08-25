@@ -34,7 +34,7 @@ import { PinSetupPromptModal } from './components/PinSetupPromptModal';
 import { ShieldCheck } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
-  const { activeView, supabaseUser, isAuthLoading } = useFinancial();
+  const { activeView, supabaseUser, isAuthLoading, isAppUnlocked } = useFinancial();
 
   // 1. Initial Banking Security Verification State
   if (isAuthLoading) {
@@ -52,9 +52,7 @@ export const AppContent: React.FC = () => {
   }
 
   // 2. Unauthenticated Gatekeeper: Secure Banking Login
-  const isSessionUnlocked = Boolean(supabaseUser) || (typeof window !== 'undefined' && sessionStorage.getItem('gastfin_unlocked_current_session') === 'true');
-
-  if (!isSessionUnlocked && !supabaseUser) {
+  if (!supabaseUser && !isAppUnlocked) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 selection:bg-emerald-500 selection:text-white">
         <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/25 via-slate-950 to-slate-950" />

@@ -111,6 +111,8 @@ interface FinancialContextType {
   isAuthLoading: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
+  isAppUnlocked: boolean;
+  unlockApp: () => void;
   loginWithSupabase: (email: string, password: string) => Promise<{ success: boolean; error?: string; hasPin: boolean; pin?: string | null }>;
   signupWithSupabase: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   logoutSupabase: () => Promise<void>;
@@ -267,6 +269,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
     return localStorage.getItem('gastfin_privacy_v1') === 'true';
+  });
+
+  const [isAppUnlocked, setIsAppUnlocked] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('gastfin_unlocked_current_session') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
@@ -492,10 +502,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
+  const unlockApp = () => {
+    sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+    localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+    setIsAppUnlocked(true);
+    setIsSessionLocked(false);
+    setIsAuthModalOpen(false);
+  };
+
   const unlockSession = () => {
     sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
     localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+    setIsAppUnlocked(true);
     setIsSessionLocked(false);
+    setIsAuthModalOpen(false);
     triggerCelebration();
   };
 
@@ -505,6 +525,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     sessionStorage.removeItem('gastfin_unlocked_current_session');
     localStorage.removeItem('gastfin_last_active_time');
+    setIsAppUnlocked(false);
     setIsSessionLocked(false);
     setTransactions([]);
     setDebts([]);
@@ -594,15 +615,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSupabaseUser(data.user);
         setIsCloudConnected(true);
         const cloudRes = await loadCloudData(data.user.id);
-        const effectivePin = cloudRes.pin || data.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1') || null;
         if (effectivePin) {
           setUserPINState(effectivePin);
           localStorage.setItem('gastfin_user_pin_v1', effectivePin);
         }
-        sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-        setIsSessionLocked(false);
-        setIsAuthModalOpen(false);
+        unlockApp();
         triggerCelebration();
         return { success: true, hasPin: Boolean(effectivePin), pin: effectivePin };
       }
@@ -643,10 +660,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           displayName: displayName || userName,
           currency: currentCurrency.code,
         });
-        sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
-        localStorage.setItem('gastfin_last_active_time', Date.now().toString());
-        setIsSessionLocked(false);
-        setIsAuthModalOpen(false);
+        unlockApp();
         triggerCelebration();
         return { success: true };
       }
@@ -1674,6 +1688,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isAuthLoading,
         isAuthModalOpen,
         setIsAuthModalOpen,
+        isAppUnlocked,
+        unlockApp,
         loginWithSupabase,
         signupWithSupabase,
         logoutSupabase,
