@@ -803,6 +803,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const cleanName = name.trim() || 'Usuario';
       setUserName(cleanName);
       setIsCurrencySetupModalOpen(false);
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const uid = supabaseUser?.id || session?.user?.id;
+        if (uid) {
+          syncUserMetadataToSupabase(uid, { currency: found.code, displayName: cleanName });
+        }
+      });
       triggerCelebration();
     }
   };
@@ -1454,6 +1460,21 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
     return () => unsubscribe();
   }, [supabaseUser]);
+
+  // Automatic online reconnect & background cloud synchronization
+  useEffect(() => {
+    const handleOnlineSync = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setIsCloudConnected(true);
+          loadCloudData(session.user.id);
+        }
+      });
+    };
+    window.addEventListener('online', handleOnlineSync);
+    return () => window.removeEventListener('online', handleOnlineSync);
+  }, []);
 
   // Sync with LocalStorage
   useEffect(() => {

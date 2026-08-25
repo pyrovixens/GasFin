@@ -112,10 +112,7 @@ export const AuthModal: React.FC = () => {
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-            if (!currentStoredPin && !res.hasPin) {
-              setTimeout(() => setIsPinPromptOpen(true), 300);
-            }
-          }, 600);
+          }, 500);
         }
       } else {
         // Signup
@@ -125,16 +122,12 @@ export const AuthModal: React.FC = () => {
         } else {
           setSavedAuthEmail(cleanEmail);
           if (displayName.trim()) setUserName(displayName.trim());
-          setSuccessMsg('¡Cuenta creada con éxito! Tus datos ahora están respaldados.');
+          setSuccessMsg('¡Cuenta creada con éxito! Tus finanzas ahora están respaldadas en la nube.');
           triggerCelebration();
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-            const currentStoredPin = localStorage.getItem('gastfin_user_pin_v1');
-            if (!currentStoredPin) {
-              setTimeout(() => setIsPinPromptOpen(true), 300);
-            }
-          }, 600);
+          }, 500);
         }
       }
     } catch (err: any) {

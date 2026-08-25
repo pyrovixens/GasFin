@@ -53,11 +53,11 @@ export const CurrencySetupModal: React.FC = () => {
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Configuración de Acceso
+            Configuración de Tu Cuenta
           </h2>
 
           <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-            Puedes sincronizar tus datos en la nube de GastFin o comenzar de inmediato en modo local.
+            Personaliza tu alias y tu moneda principal para mantener todas tus finanzas sincronizadas en la nube.
           </p>
         </div>
 
@@ -67,14 +67,14 @@ export const CurrencySetupModal: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Cloud size={18} className="text-indigo-400" />
-                <span className="font-extrabold text-white text-xs">¿Deseas acceder desde cualquier dispositivo?</span>
+                <span className="font-extrabold text-white text-xs">Acceso Multi-dispositivo en Tiempo Real</span>
               </div>
               <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Recomendado
+                Seguro
               </span>
             </div>
             <p className="text-[11px] text-slate-300">
-              Inicia sesión o crea tu cuenta gratuita para guardar tus finanzas en el servidor seguro en tiempo real.
+              Inicia sesión o crea tu cuenta para guardar y proyectar tus finanzas en tu PC, teléfono y tablet automáticamente.
             </p>
             <button
               type="button"
@@ -89,12 +89,6 @@ export const CurrencySetupModal: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           
-          <div className="flex items-center gap-2">
-            <div className="h-px bg-slate-800 flex-1" />
-            <span className="text-[11px] font-bold text-slate-400 uppercase">o continúa en modo local</span>
-            <div className="h-px bg-slate-800 flex-1" />
-          </div>
-
           {/* Alias / Name Input Box */}
           <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/90 space-y-2">
             <label className="block text-xs font-bold text-slate-200 flex items-center gap-1.5">
@@ -118,10 +112,9 @@ export const CurrencySetupModal: React.FC = () => {
                 <Coins size={15} className="text-amber-400" />
                 <span>¿En qué divisa prefieres trabajar?</span>
               </label>
-              <span className="text-[11px] text-slate-400 font-semibold">Formato con puntos</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {SUPPORTED_CURRENCIES.map((curr) => {
                 const isSelected = selectedCurrencyCode === curr.code;
                 return (
@@ -129,41 +122,31 @@ export const CurrencySetupModal: React.FC = () => {
                     key={curr.code}
                     type="button"
                     onClick={() => setSelectedCurrencyCode(curr.code)}
-                    className={`p-3 rounded-2xl text-left border transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-emerald-950/50 border-emerald-500 shadow-glow-emerald text-white ring-1 ring-emerald-500'
-                        : 'bg-slate-800/40 border-slate-700/70 text-slate-300 hover:border-emerald-500/40 hover:bg-slate-800/80'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-white shadow-glow-emerald ring-1 ring-emerald-500/50'
+                        : 'bg-slate-800/60 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-sm text-white">{curr.code} ({curr.symbol})</span>
-                      <span className="text-[11px] font-semibold text-slate-400">{curr.country}</span>
+                      <span className="font-mono font-black text-sm text-emerald-400">{curr.symbol}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{curr.code}</span>
                     </div>
-                    <div className="mt-1 pt-1 border-t border-slate-700/50 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-400">Ejemplo:</span>
-                      <span className="font-mono font-bold text-emerald-400">{curr.example}</span>
-                    </div>
+                    <p className="text-xs font-bold text-white mt-1 truncate">{curr.name}</p>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Submit Action Button */}
-          <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <span className="text-[11px] text-slate-400 text-center sm:text-left">
-              🔒 Tus datos se guardan de forma privada.
-            </span>
-
-            <button
-              type="submit"
-              className="w-full sm:w-auto px-7 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm shadow-glow-emerald hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-              <span>¡Comenzar con GastFin!</span>
-              <ArrowRight size={18} />
-            </button>
-          </div>
-
+          {/* Submit button */}
+          <button
+            type="submit"
+            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-sm shadow-glow-emerald transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+          >
+            <span>Confirmar y Comenzar</span>
+            <ArrowRight size={16} />
+          </button>
         </form>
 
       </div>
