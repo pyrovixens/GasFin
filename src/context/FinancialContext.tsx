@@ -110,7 +110,7 @@ interface FinancialContextType {
   isCloudConnected: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  loginWithSupabase: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithSupabase: (email: string, password: string) => Promise<{ success: boolean; error?: string; hasPin: boolean; pin?: string | null }>;
   signupWithSupabase: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   logoutSupabase: () => Promise<void>;
   syncLocalToCloud: () => Promise<void>;
@@ -462,9 +462,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } else {
       localStorage.removeItem('gastfin_user_pin_v1');
     }
-    if (supabaseUser) {
-      syncUserMetadataToSupabase(supabaseUser.id, { pin });
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const uid = supabaseUser?.id || session?.user?.id;
+      if (uid) {
+        syncUserMetadataToSupabase(uid, { pin });
+      }
+    });
   };
 
   const setActiveView = (view: ActiveView) => {
@@ -514,9 +517,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // 3. CLOUD LOAD & SYNC FUNCTIONS
   // ==========================================
 
-  const loadCloudData = async (userId: string) => {
+  const loadCloudData = async (userId: string): Promise<{ success: boolean; pin: string | null }> => {
     try {
       const res = await fetchUserDataFromSupabase(userId);
+      let cloudPin: string | null = null;
       if (res.success && res.data) {
         if (res.data.transactions.length > 0) setTransactions(res.data.transactions);
         if (res.data.debts.length > 0) setDebts(res.data.debts);
@@ -532,13 +536,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
         
         // Multi-device PIN sync
-        if (res.data.pin) {
-          setUserPINState(res.data.pin);
-          localStorage.setItem('gastfin_user_pin_v1', res.data.pin);
-          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
-          if (unlockedThisSession !== 'true') {
-            setIsSessionLocked(true);
-          }
+        const resolvedPin = res.data.pin || localStorage.getItem('gastfin_user_pin_v1');
+        if (resolvedPin) {
+          cloudPin = resolvedPin;
+          setUserPINState(resolvedPin);
+          localStorage.setItem('gastfin_user_pin_v1', resolvedPin);
         }
 
         // Multi-device Assets sync
@@ -569,25 +571,32 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           localStorage.setItem('gastfin_user_name_v6', cleanName);
         }
       }
+      return { success: true, pin: cloudPin };
     } catch (e) {
       console.warn('Cloud sync fetch error:', e);
+      return { success: false, pin: null };
     }
   };
 
-  const loginWithSupabase = async (email: string, password: string) => {
+  const loginWithSupabase = async (email: string, password: string): Promise<{ success: boolean; error?: string; hasPin: boolean; pin?: string | null }> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: error.message, hasPin: false };
       if (data.user) {
         setSupabaseUser(data.user);
         setIsCloudConnected(true);
-        await loadCloudData(data.user.id);
+        const cloudRes = await loadCloudData(data.user.id);
+        const effectivePin = cloudRes.pin || data.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1') || null;
+        if (effectivePin) {
+          setUserPINState(effectivePin);
+          localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+        }
         triggerCelebration();
-        return { success: true };
+        return { success: true, hasPin: Boolean(effectivePin), pin: effectivePin };
       }
-      return { success: false, error: 'No se pudo iniciar sesión.' };
+      return { success: false, error: 'No se pudo iniciar sesión.', hasPin: false };
     } catch (e: any) {
-      return { success: false, error: e.message };
+      return { success: false, error: e.message, hasPin: false };
     }
   };
 

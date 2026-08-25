@@ -106,16 +106,16 @@ export const AuthModal: React.FC = () => {
           }
         } else {
           setSavedAuthEmail(cleanEmail);
-          setSuccessMsg('¡Sesión iniciada con éxito!');
+          const currentStoredPin = localStorage.getItem('gastfin_user_pin_v1') || res.pin;
+          setSuccessMsg(currentStoredPin ? '¡Sesión y PIN sincronizados desde la nube!' : '¡Sesión iniciada con éxito!');
           triggerCelebration();
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-            // Prompt for 4-digit PIN setup if not configured yet
-            if (!userPIN) {
+            if (!currentStoredPin && !res.hasPin) {
               setTimeout(() => setIsPinPromptOpen(true), 300);
             }
-          }, 800);
+          }, 600);
         }
       } else {
         // Signup
@@ -130,11 +130,11 @@ export const AuthModal: React.FC = () => {
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-            // Prompt for 4-digit PIN setup if not configured yet
-            if (!userPIN) {
+            const currentStoredPin = localStorage.getItem('gastfin_user_pin_v1');
+            if (!currentStoredPin) {
               setTimeout(() => setIsPinPromptOpen(true), 300);
             }
-          }, 800);
+          }, 600);
         }
       }
     } catch (err: any) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, KeyRound, ArrowRight, X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
@@ -7,6 +7,7 @@ export const PinSetupPromptModal: React.FC = () => {
     isPinPromptOpen, 
     setIsPinPromptOpen, 
     setUserPIN, 
+    userPIN,
     triggerCelebration,
     userName 
   } = useFinancial();
@@ -15,7 +16,20 @@ export const PinSetupPromptModal: React.FC = () => {
   const [confirmPin, setConfirmPin] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Auto-close if a PIN is already configured or synced from the cloud
+  useEffect(() => {
+    const existing = userPIN || localStorage.getItem('gastfin_user_pin_v1');
+    if (existing && isPinPromptOpen) {
+      setIsPinPromptOpen(false);
+    }
+  }, [userPIN, isPinPromptOpen, setIsPinPromptOpen]);
+
   if (!isPinPromptOpen) return null;
+
+  // Double check to never show prompt if user already has a PIN
+  if (userPIN || localStorage.getItem('gastfin_user_pin_v1')) {
+    return null;
+  }
 
   const handleSavePin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,22 +132,22 @@ export const PinSetupPromptModal: React.FC = () => {
             <p className="text-xs text-rose-400 font-bold animate-shake">{errorMsg}</p>
           )}
 
-          <div className="space-y-2 pt-2">
+          <div className="pt-2 space-y-2">
             <button
               type="submit"
               disabled={pin.length !== 4 || (confirmPin.length > 0 && pin !== confirmPin)}
-              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-glow-emerald transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-sm shadow-glow-emerald transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              <span>Guardar PIN y Activar Acceso Rápido</span>
+              <span>Guardar y Activar PIN</span>
               <ArrowRight size={16} />
             </button>
 
             <button
               type="button"
               onClick={handleSkip}
-              className="w-full py-2.5 px-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white font-semibold text-xs transition-colors cursor-pointer"
+              className="w-full py-2 px-3 text-xs text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
             >
-              Omitir por ahora (ingresar con contraseña)
+              Configurar más tarde
             </button>
           </div>
         </form>
