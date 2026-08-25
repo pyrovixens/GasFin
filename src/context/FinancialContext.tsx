@@ -300,11 +300,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return found || SUPPORTED_CURRENCIES[0];
   });
 
-  const [isCurrencySetupModalOpen, setIsCurrencySetupModalOpen] = useState<boolean>(() => {
-    const isLocked = localStorage.getItem('gastfin_curr_locked_v6');
-    const savedName = localStorage.getItem('gastfin_user_name_v6');
-    return isLocked !== 'true' || !savedName;
-  });
+  const [isCurrencySetupModalOpen, setIsCurrencySetupModalOpen] = useState<boolean>(false);
 
   // Data Collections
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -363,26 +359,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => {
     try {
       const stored = localStorage.getItem('gastfin_subscriptions_v1');
-      return stored ? JSON.parse(stored) : [
-        {
-          id: 'sub-netflix',
-          name: 'Netflix Premium 4K',
-          amount: 11990,
-          billingCycle: 'monthly',
-          renewalDay: 15,
-          category: 'Streaming & Ocio',
-          active: true
-        },
-        {
-          id: 'sub-spotify',
-          name: 'Spotify Familiar',
-          amount: 6490,
-          billingCycle: 'monthly',
-          renewalDay: 5,
-          category: 'Streaming & Ocio',
-          active: true
-        }
-      ];
+      return stored ? JSON.parse(stored) : [];
     } catch {
       return [];
     }
@@ -551,16 +528,27 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const res = await fetchUserDataFromSupabase(userId);
       let cloudPin: string | null = null;
       if (res.success && res.data) {
-        if (res.data.transactions.length > 0) setTransactions(res.data.transactions);
-        if (res.data.debts.length > 0) setDebts(res.data.debts);
-        if (res.data.goals.length > 0) setGoals(res.data.goals);
-        if (res.data.budgets.length > 0) {
+        if (res.data.transactions && res.data.transactions.length > 0) {
+          setTransactions(res.data.transactions);
+          localStorage.setItem('gastfin_tx_v6', JSON.stringify(res.data.transactions));
+        }
+        if (res.data.debts && res.data.debts.length > 0) {
+          setDebts(res.data.debts);
+          localStorage.setItem('gastfin_debts_v6', JSON.stringify(res.data.debts));
+        }
+        if (res.data.goals && res.data.goals.length > 0) {
+          setGoals(res.data.goals);
+          localStorage.setItem('gastfin_goals_v6', JSON.stringify(res.data.goals));
+        }
+        if (res.data.budgets && res.data.budgets.length > 0) {
           const totalPreset = res.data.budgets.reduce((acc: number, b: any) => acc + (b.limit_amount || b.limitAmount || 0), 0);
           if (totalPreset === 1900000 && res.data.budgets.length >= 7) {
             clearAllBudgetsFromSupabase(userId);
             setBudgets([]);
+            localStorage.removeItem('gastfin_budgets_v10');
           } else {
             setBudgets(res.data.budgets);
+            localStorage.setItem('gastfin_budgets_v10', JSON.stringify(res.data.budgets));
           }
         }
         
