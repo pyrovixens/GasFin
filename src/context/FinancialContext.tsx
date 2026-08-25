@@ -107,6 +107,8 @@ interface FinancialContextType {
 
   // Supabase Cloud Sync & Multi-user
   supabaseUser: any;
+  setSupabaseUser: (user: any) => void;
+  loadCloudData: (userId: string) => Promise<{ success: boolean; pin: string | null }>;
   isCloudConnected: boolean;
   isAuthLoading: boolean;
   isAuthModalOpen: boolean;
@@ -603,13 +605,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSupabaseUser(data.user);
         setIsCloudConnected(true);
         const cloudRes = await loadCloudData(data.user.id);
-        if (effectivePin) {
-          setUserPINState(effectivePin);
-          localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+        const resolvedPin = cloudRes.pin || data.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
+        if (resolvedPin) {
+          setUserPINState(resolvedPin);
+          localStorage.setItem('gastfin_user_pin_v1', resolvedPin);
         }
+        setSavedAuthEmailState(email);
+        localStorage.setItem('gastfin_saved_auth_email', email);
         unlockApp();
         triggerCelebration();
-        return { success: true, hasPin: Boolean(effectivePin), pin: effectivePin };
+        return { success: true, hasPin: Boolean(resolvedPin), pin: resolvedPin };
       }
       return { success: false, error: 'No se pudo iniciar sesión.', hasPin: false };
     } catch (e: any) {
@@ -1742,6 +1747,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setUserName,
         motivationalQuote,
         supabaseUser,
+        setSupabaseUser,
+        loadCloudData,
         isCloudConnected,
         isAuthLoading,
         isAuthModalOpen,

@@ -10,6 +10,7 @@ import {
   Coins
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
+import { supabase } from '../services/supabase';
 
 interface AuthModalProps {
   isFullScreen?: boolean;
@@ -20,9 +21,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     isAuthModalOpen, 
     setIsAuthModalOpen, 
     supabaseUser, 
+    setSupabaseUser,
+    loadCloudData,
     loginWithSupabase, 
     signupWithSupabase, 
     userPIN,
+    savedAuthEmail,
     setUserName,
     triggerCelebration,
     unlockApp
@@ -40,13 +44,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const effectivePin = userPIN || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_user_pin_v1') : null);
+  const effectiveEmail = savedAuthEmail || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_saved_auth_email') : '') || '';
 
-  // Initialize: ALWAYS start email blank (let browser autofill natively if user saved it)
+  // Initialize: if device has a saved PIN, open in PIN mode by default
   useEffect(() => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setEnteredPin('');
-    setEmail(''); // Completely blank by default
+    setEmail(''); // Blank by default for native browser autofill
     
     if (effectivePin) {
       setAuthMode('pin');
@@ -55,17 +60,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     }
   }, [isAuthModalOpen, isFullScreen, effectivePin]);
 
-  // If user is already authenticated in Supabase, do NOT show this modal
+  // If user is already authenticated in Supabase and app is unlocked, do NOT render
   if (supabaseUser) return null;
   if (!isFullScreen && !isAuthModalOpen) return null;
 
-  // Handle Quick PIN Login: verifies PIN and enters immediately without password
-  const processPinCheck = (pinToTest: string) => {
+  // Handle Quick PIN Login: verifies PIN, loads cloud data, and enters immediately
+  const processPinCheck = async (pinToTest: string) => {
     if (!effectivePin) return;
 
     if (pinToTest === effectivePin) {
       setErrorMsg(null);
       setSuccessMsg('¡PIN verificado! Accediendo...');
+      
+      // Ensure Supabase session is attached and load full cloud data
+      try {
+        const { data: sessData } = await supabase.auth.getSession();
+        if (sessData?.session?.user) {
+          setSupabaseUser(sessData.session.user);
+          await loadCloudData(sessData.session.user.id);
+        }
+      } catch (err) {
+        console.warn('Session verify on PIN warning:', err);
+      }
+
       unlockApp();
       triggerCelebration();
     } else {
@@ -185,7 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
           <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-300 truncate">
               <User size={15} className="text-emerald-400 flex-shrink-0" />
-              <span className="font-bold truncate">Usuario con PIN Configurado</span>
+              <span className="font-bold truncate">{effectiveEmail || 'Usuario Registrado'}</span>
             </div>
             <button
               type="button"
