@@ -1446,30 +1446,84 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // 5. ALL USE_EFFECT HOOKS
   // ==========================================
 
-  // Session & Auth State Listeners
+  // Session & Auth State Listeners with iOS Handoff Auto-Recovery
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        setIsCloudConnected(true);
-        const cloudRes = await loadCloudData(session.user.id);
-        const effectivePin = cloudRes.pin || session.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
-        if (effectivePin) {
-          setUserPINState(effectivePin);
-          localStorage.setItem('gastfin_user_pin_v1', effectivePin);
-          const unlockedThisSession = sessionStorage.getItem('gastfin_unlocked_current_session');
-          if (unlockedThisSession !== 'true') {
-            setIsSessionLocked(true);
+    const initializeAuth = async () => {
+      // 1. Check if we opened from an iOS Add-to-Home-Screen handoff URL
+      const hash = typeof window !== 'undefined' ? (window.location.hash || '') : '';
+      const search = typeof window !== 'undefined' ? (window.location.search || '') : '';
+      let handoffRefreshToken: string | null = null;
+
+      if (hash.includes('auth_sync=') || search.includes('auth_sync=')) {
+        try {
+          const raw = hash.includes('auth_sync=')
+            ? hash.split('auth_sync=')[1].split('&')[0]
+            : new URLSearchParams(search).get('auth_sync');
+          if (raw) {
+            const decoded = JSON.parse(atob(decodeURIComponent(raw)));
+            if (decoded && decoded.rt) {
+              handoffRefreshToken = decoded.rt;
+            }
           }
+        } catch (err) {
+          console.warn('Auth handoff parse warning:', err);
         }
-      } else {
+        // Clean URL hash so the address bar stays pristine
+        try {
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch {}
+      }
+
+      // 2. If handoff token exists, exchange it for a live session in this container!
+      if (handoffRefreshToken) {
+        try {
+          const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession({
+            refresh_token: handoffRefreshToken
+          });
+          if (!refreshErr && refreshData.session?.user) {
+            setSupabaseUser(refreshData.session.user);
+            setIsCloudConnected(true);
+            const cloudRes = await loadCloudData(refreshData.session.user.id);
+            const effectivePin = cloudRes.pin || refreshData.session.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
+            if (effectivePin) {
+              setUserPINState(effectivePin);
+              localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+            }
+            unlockApp();
+            setIsAuthLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Auto handoff restore warning:', e);
+        }
+      }
+
+      // 3. Standard Local Storage Session Recovery
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          setIsCloudConnected(true);
+          const cloudRes = await loadCloudData(session.user.id);
+          const effectivePin = cloudRes.pin || session.user.user_metadata?.pin || localStorage.getItem('gastfin_user_pin_v1');
+          if (effectivePin) {
+            setUserPINState(effectivePin);
+            localStorage.setItem('gastfin_user_pin_v1', effectivePin);
+          }
+          unlockApp();
+        } else {
+          setSupabaseUser(null);
+          setIsCloudConnected(false);
+        }
+      } catch {
         setSupabaseUser(null);
         setIsCloudConnected(false);
+      } finally {
+        setIsAuthLoading(false);
       }
-      setIsAuthLoading(false);
-    }).catch(() => {
-      setIsAuthLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
@@ -1481,6 +1535,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setUserPINState(effectivePin);
           localStorage.setItem('gastfin_user_pin_v1', effectivePin);
         }
+        unlockApp();
       } else {
         setSupabaseUser(null);
         setIsCloudConnected(false);
@@ -1490,6 +1545,21 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Keep URL handoff sync active for iOS "Add to Home Screen"
+  useEffect(() => {
+    if (!supabaseUser) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.refresh_token) {
+        try {
+          const payload = encodeURIComponent(btoa(JSON.stringify({ rt: session.refresh_token, t: Date.now() })));
+          const currentUrl = new URL(window.location.href);
+          currentUrl.hash = `auth_sync=${payload}`;
+          window.history.replaceState(null, '', currentUrl.toString());
+        } catch {}
+      }
+    });
+  }, [supabaseUser]);
 
   // Realtime multi-device sync
   useEffect(() => {
