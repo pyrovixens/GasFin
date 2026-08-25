@@ -42,6 +42,7 @@ import {
   syncBudgetToSupabase, 
   deleteBudgetFromSupabase, 
   clearAllBudgetsFromSupabase,
+  syncUserMetadataToSupabase,
   syncFullDatasetToSupabase 
 } from '../services/supabase';
 
@@ -376,7 +377,40 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setBudgets(res.data.budgets);
           }
         }
-        if (res.data.profile?.display_name) setUserName(res.data.profile.display_name);
+        
+        // Multi-device PIN sync
+        if (res.data.pin) {
+          setUserPINState(res.data.pin);
+          localStorage.setItem('gastfin_user_pin_v1', res.data.pin);
+        }
+
+        // Multi-device Assets sync
+        if (res.data.assets && res.data.assets.length > 0) {
+          setAssets(res.data.assets);
+          localStorage.setItem('gastfin_assets_v1', JSON.stringify(res.data.assets));
+        }
+
+        // Multi-device Subscriptions sync
+        if (res.data.subscriptions && res.data.subscriptions.length > 0) {
+          setSubscriptions(res.data.subscriptions);
+          localStorage.setItem('gastfin_subscriptions_v1', JSON.stringify(res.data.subscriptions));
+        }
+
+        // Multi-device Currency sync
+        if (res.data.currency) {
+          const found = SUPPORTED_CURRENCIES.find(c => c.code === res.data.currency);
+          if (found) {
+            setCurrentCurrency(found);
+            localStorage.setItem('gastfin_currency_v6', found.code);
+          }
+        }
+
+        // Multi-device Profile Name sync
+        if (res.data.displayName || res.data.profile?.display_name) {
+          const cleanName = res.data.displayName || res.data.profile?.display_name;
+          setUserNameState(cleanName);
+          localStorage.setItem('gastfin_user_name_v6', cleanName);
+        }
       }
     } catch (e) {
       console.warn('Cloud sync fetch error:', e);
@@ -438,7 +472,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         email,
         password,
         options: {
-          data: { display_name: displayName || 'Usuario' }
+          data: { 
+            display_name: displayName || 'Usuario',
+            pin: userPIN,
+            assets,
+            subscriptions,
+            currency: currentCurrency.code
+          }
         }
       });
       if (error) return { success: false, error: error.message };
@@ -451,7 +491,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           transactions,
           debts,
           goals,
-          budgets
+          budgets,
+          assets,
+          subscriptions,
+          pin: userPIN,
+          displayName: displayName || userName,
+          currency: currentCurrency.code,
         });
         triggerCelebration();
         return { success: true };
@@ -474,7 +519,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       transactions,
       debts,
       goals,
-      budgets
+      budgets,
+      assets,
+      subscriptions,
+      pin: userPIN,
+      displayName: userName,
+      currency: currentCurrency.code,
     });
     triggerCelebration();
   };
@@ -717,16 +767,28 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addAsset = (asset: Omit<Asset, 'id'>) => {
     const newAsset: Asset = { ...asset, id: `asset-${Date.now()}` };
-    setAssets(prev => [newAsset, ...prev]);
+    setAssets(prev => {
+      const updated = [newAsset, ...prev];
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { assets: updated });
+      return updated;
+    });
     triggerCelebration();
   };
 
   const updateAsset = (id: string, updates: Partial<Asset>) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    setAssets(prev => {
+      const updated = prev.map(a => a.id === id ? { ...a, ...updates } : a);
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { assets: updated });
+      return updated;
+    });
   };
 
   const deleteAsset = (id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id));
+    setAssets(prev => {
+      const updated = prev.filter(a => a.id !== id);
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { assets: updated });
+      return updated;
+    });
   };
 
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -777,19 +839,35 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addSubscription = (sub: Omit<Subscription, 'id'>) => {
     const newSub: Subscription = { ...sub, id: `sub-${Date.now()}` };
-    setSubscriptions(prev => [newSub, ...prev]);
+    setSubscriptions(prev => {
+      const updated = [newSub, ...prev];
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { subscriptions: updated });
+      return updated;
+    });
   };
 
   const updateSubscription = (id: string, updates: Partial<Subscription>) => {
-    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    setSubscriptions(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, ...updates } : s);
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { subscriptions: updated });
+      return updated;
+    });
   };
 
   const deleteSubscription = (id: string) => {
-    setSubscriptions(prev => prev.filter(s => s.id !== id));
+    setSubscriptions(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { subscriptions: updated });
+      return updated;
+    });
   };
 
   const toggleSubscription = (id: string) => {
-    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+    setSubscriptions(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, active: !s.active } : s);
+      if (supabaseUser) syncUserMetadataToSupabase(supabaseUser.id, { subscriptions: updated });
+      return updated;
+    });
   };
 
   // Pro Suite: Command Palette & Modals
@@ -823,6 +901,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem('gastfin_user_pin_v1', pin);
     } else {
       localStorage.removeItem('gastfin_user_pin_v1');
+    }
+    if (supabaseUser) {
+      syncUserMetadataToSupabase(supabaseUser.id, { pin });
     }
   };
 

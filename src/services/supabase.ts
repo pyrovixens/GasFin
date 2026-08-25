@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Transaction, Debt, Goal, CategoryBudget } from '../types';
+import { Transaction, Debt, Goal, CategoryBudget, Asset, Subscription } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ffbevhpesunzoghhbuff.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable__MZ_pzWfB4XbBloJKglEIA_z0q1hPE5';
@@ -13,18 +13,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // ==========================================
-// 1. SUPABASE DATABASE SYNC HELPERS
+// 1. SUPABASE DATABASE & METADATA FETCH HELPERS
 // ==========================================
 
 export const fetchUserDataFromSupabase = async (userId: string) => {
   try {
-    const [txRes, debtsRes, goalsRes, budgetsRes, profileRes] = await Promise.all([
+    const [txRes, debtsRes, goalsRes, budgetsRes, profileRes, authRes] = await Promise.all([
       supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
       supabase.from('debts').select('*').eq('user_id', userId),
       supabase.from('goals').select('*').eq('user_id', userId),
       supabase.from('budgets').select('*').eq('user_id', userId),
-      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      supabase.auth.getUser(),
     ]);
+
+    const metadata = authRes.data?.user?.user_metadata || {};
+    const userPin: string | null = metadata.pin || profileRes.data?.pin_code || profileRes.data?.pin || null;
+    const userAssets: Asset[] = Array.isArray(metadata.assets) ? metadata.assets : [];
+    const userSubscriptions: Subscription[] = Array.isArray(metadata.subscriptions) ? metadata.subscriptions : [];
 
     const transactions: Transaction[] = (txRes.data || []).map((t: any) => ({
       id: t.id,
@@ -84,6 +90,11 @@ export const fetchUserDataFromSupabase = async (userId: string) => {
         goals,
         budgets,
         profile: profileRes.data || null,
+        pin: userPin,
+        assets: userAssets,
+        subscriptions: userSubscriptions,
+        displayName: metadata.display_name || profileRes.data?.display_name || null,
+        currency: metadata.currency || null,
       },
     };
   } catch (error) {
@@ -216,6 +227,39 @@ export const clearAllBudgetsFromSupabase = async (userId: string) => {
   }
 };
 
+// Cross-device User Metadata & PIN synchronization
+export const syncUserMetadataToSupabase = async (
+  userId: string,
+  meta: {
+    pin?: string | null;
+    assets?: Asset[];
+    subscriptions?: Subscription[];
+    displayName?: string;
+    currency?: string;
+  }
+) => {
+  try {
+    const userUpdatePayload: any = {};
+    if (meta.pin !== undefined) userUpdatePayload.pin = meta.pin;
+    if (meta.assets !== undefined) userUpdatePayload.assets = meta.assets;
+    if (meta.subscriptions !== undefined) userUpdatePayload.subscriptions = meta.subscriptions;
+    if (meta.displayName !== undefined) userUpdatePayload.display_name = meta.displayName;
+    if (meta.currency !== undefined) userUpdatePayload.currency = meta.currency;
+
+    await supabase.auth.updateUser({
+      data: userUpdatePayload
+    });
+
+    const profilePayload: any = { id: userId, updated_at: new Date().toISOString() };
+    if (meta.displayName !== undefined) profilePayload.display_name = meta.displayName;
+    if (meta.pin !== undefined) profilePayload.pin_code = meta.pin;
+    
+    await supabase.from('profiles').upsert(profilePayload);
+  } catch (e) {
+    console.warn('Supabase metadata sync warning:', e);
+  }
+};
+
 export const syncFullDatasetToSupabase = async (
   userId: string,
   data: {
@@ -223,6 +267,11 @@ export const syncFullDatasetToSupabase = async (
     debts: Debt[];
     goals: Goal[];
     budgets: CategoryBudget[];
+    assets?: Asset[];
+    subscriptions?: Subscription[];
+    pin?: string | null;
+    displayName?: string;
+    currency?: string;
   }
 ) => {
   if (!userId) return;
@@ -232,6 +281,13 @@ export const syncFullDatasetToSupabase = async (
       ...data.debts.map(d => syncDebtToSupabase(d, userId)),
       ...data.goals.map(g => syncGoalToSupabase(g, userId)),
       ...data.budgets.map(b => syncBudgetToSupabase(b, userId)),
+      syncUserMetadataToSupabase(userId, {
+        pin: data.pin,
+        assets: data.assets,
+        subscriptions: data.subscriptions,
+        displayName: data.displayName,
+        currency: data.currency,
+      })
     ];
     await Promise.all(promises);
     return { success: true };
@@ -263,6 +319,9 @@ export const subscribeToUserRealtimeChanges = (
       onDataChanged();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${userId}` }, () => {
+      onDataChanged();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, () => {
       onDataChanged();
     })
     .subscribe();
