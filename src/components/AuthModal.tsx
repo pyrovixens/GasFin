@@ -3,7 +3,7 @@ import {
   Lock, 
   Mail, 
   User, 
-  KeyRound,
+  KeyRound, 
   X, 
   ArrowRight, 
   ShieldCheck, 
@@ -12,6 +12,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
+import { supabase } from '../services/supabase';
 
 interface AuthModalProps {
   isFullScreen?: boolean;
@@ -22,6 +23,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     isAuthModalOpen, 
     setIsAuthModalOpen, 
     supabaseUser, 
+    setSupabaseUser,
+    setIsCloudConnected,
     loginWithSupabase, 
     signupWithSupabase, 
     logoutSupabase,
@@ -31,7 +34,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     setSavedAuthEmail,
     userName,
     setUserName,
-    triggerCelebration
+    triggerCelebration,
+    setIsSessionLocked
   } = useFinancial();
 
   // Mode: 'pin' (if configured), 'login' (email + password), 'signup' (create account)
@@ -45,35 +49,58 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Initialize mode and email
+  const effectivePin = userPIN || (typeof window !== 'undefined' ? localStorage.getItem('gastfin_user_pin_v1') : null);
+
+  // Initialize mode and clean email (NO username defaults)
   useEffect(() => {
     setErrorMsg(null);
     setSuccessMsg(null);
     setEnteredPin('');
     
-    const remembered = savedAuthEmail || (supabaseUser?.email ?? '') || (userName !== 'Usuario' ? userName : '');
-    if (remembered) {
-      setEmail(remembered);
-    }
+    // Only prefill if it is a valid email (contains @), NEVER a display name
+    const rememberedEmail = (savedAuthEmail && savedAuthEmail.includes('@'))
+      ? savedAuthEmail
+      : (supabaseUser?.email && supabaseUser.email.includes('@'))
+        ? supabaseUser.email
+        : '';
+        
+    setEmail(rememberedEmail);
 
-    setAuthMode('login');
-  }, [isAuthModalOpen, isFullScreen, savedAuthEmail, supabaseUser, userName]);
+    // If device has a saved PIN and remembered email, start in PIN mode for quick access, otherwise login
+    if (effectivePin && rememberedEmail) {
+      setAuthMode('pin');
+    } else {
+      setAuthMode('login');
+    }
+  }, [isAuthModalOpen, isFullScreen, savedAuthEmail, supabaseUser]);
 
   if (!isFullScreen && !isAuthModalOpen) return null;
 
-  // Handle Quick PIN Login with auto-check
-  const processPinCheck = (pinToTest: string) => {
-    const effectivePin = userPIN || localStorage.getItem('gastfin_user_pin_v1');
+  // Handle Quick PIN Login: verifies PIN and directly unlocks WITHOUT asking for password
+  const processPinCheck = async (pinToTest: string) => {
     if (!effectivePin) return;
 
     if (pinToTest === effectivePin) {
       setErrorMsg(null);
       setSuccessMsg('¡PIN verificado! Accediendo...');
+      
+      // If there is an existing session in supabase client, restore user state
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
+          setSupabaseUser(data.session.user);
+          setIsCloudConnected(true);
+        }
+      } catch {}
+
       sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+      localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+      setIsSessionLocked(false);
       triggerCelebration();
+
       setTimeout(() => {
         setIsAuthModalOpen(false);
-      }, 400);
+      }, 350);
     } else {
       setErrorMsg('PIN incorrecto. Intenta de nuevo o ingresa con contraseña.');
       setEnteredPin('');
@@ -96,7 +123,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
     }
   };
 
-  // Handle Standard Email & Password Submit
+  // Handle Email & Password Submit: logs in directly WITHOUT asking for PIN
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -117,13 +144,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
           }
         } else {
           setSavedAuthEmail(cleanEmail);
-          setSuccessMsg('¡Acceso concedido! Cargando estado de cuenta...');
+          setSuccessMsg('¡Acceso concedido! Entrando al sistema...');
           sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+          localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+          setIsSessionLocked(false);
           triggerCelebration();
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-          }, 500);
+          }, 350);
         }
       } else {
         // Signup
@@ -133,13 +162,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         } else {
           setSavedAuthEmail(cleanEmail);
           if (displayName.trim()) setUserName(displayName.trim());
-          setSuccessMsg('¡Cuenta financiera creada con éxito! Bienvenido a GastFin.');
+          setSuccessMsg('¡Cuenta creada con éxito! Bienvenido a GastFin.');
           sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
+          localStorage.setItem('gastfin_last_active_time', Date.now().toString());
+          setIsSessionLocked(false);
           triggerCelebration();
           
           setTimeout(() => {
             setIsAuthModalOpen(false);
-          }, 500);
+          }, 350);
         }
       }
     } catch (err: any) {
@@ -192,7 +223,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         <p className="text-xs text-slate-400">
           {authMode === 'pin'
             ? 'Digita tu PIN de 4 dígitos para consultar tus finanzas.'
-            : 'Ingresa tu correo y clave de seguridad para consultar tus registros.'}
+            : 'Ingresa tu correo y contraseña para acceder a tus registros.'}
         </p>
       </div>
 
@@ -213,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
                 {supabaseUser.email}
               </span>
             </div>
-            {(userPIN || localStorage.getItem('gastfin_user_pin_v1')) && (
+            {effectivePin && (
               <div className="flex items-center justify-between pt-1 border-t border-slate-800">
                 <span className="text-xs text-slate-400">Acceso Rápido:</span>
                 <span className="text-xs font-bold text-emerald-300">PIN de 4 dígitos configurado</span>
@@ -245,12 +276,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         </div>
       ) : authMode === 'pin' ? (
         
-        /* ---------------- MODE 1: QUICK PIN LOGIN ---------------- */
+        /* ---------------- MODE 1: QUICK PIN LOGIN (NO PASSWORD PROMPT) ---------------- */
         <form onSubmit={handlePinLogin} className="space-y-4">
           <div className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-300 truncate">
               <User size={15} className="text-emerald-400 flex-shrink-0" />
-              <span className="font-bold truncate">{email || userName || 'Usuario'}</span>
+              <span className="font-bold truncate">{savedAuthEmail || (email.includes('@') ? email : 'Usuario Registrado')}</span>
             </div>
             <button
               type="button"
@@ -298,16 +329,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
             <button
               type="button"
               onClick={() => { setAuthMode('login'); setErrorMsg(null); }}
-              className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer"
+              className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
-              O ingresar con correo y contraseña
+              <Mail size={13} className="text-emerald-400" />
+              <span>O ingresar con correo electrónico y contraseña</span>
             </button>
           </div>
         </form>
 
       ) : (
 
-        /* ---------------- MODE 2 & 3: EMAIL & PASSWORD ---------------- */
+        /* ---------------- MODE 2 & 3: EMAIL & PASSWORD (NO PIN PROMPT) ---------------- */
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           
           {/* Mode Toggle (Login vs Signup) */}
@@ -339,13 +371,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
           {/* Display Name (Only on Signup) */}
           {authMode === 'signup' && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">Nombre o Titular</label>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Nombre o Titular de la Cuenta</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Gustavo"
+                  placeholder="Ej. Mi Nombre o Empresa"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-emerald-500"
@@ -405,13 +437,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
                 <div className="w-5 h-5 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
               ) : (
                 <>
-                  <span>{authMode === 'login' ? 'Acceder a mi Cuenta' : 'Registrar Cuenta'}</span>
+                  <span>{authMode === 'login' ? 'Ingresar al Sistema' : 'Registrar Cuenta'}</span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
 
-            {(userPIN || localStorage.getItem('gastfin_user_pin_v1')) && (
+            {effectivePin && (
               <button
                 type="button"
                 onClick={() => { setAuthMode('pin'); setErrorMsg(null); }}

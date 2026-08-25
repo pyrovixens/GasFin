@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Unlock, LogOut, Clock, KeyRound, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Unlock, LogOut, Clock, KeyRound, AlertCircle, Mail } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
 export const SessionLockModal: React.FC = () => {
@@ -131,14 +131,25 @@ export const SessionLockModal: React.FC = () => {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={logoutUser}
-          className="w-full py-2.5 px-4 rounded-2xl bg-slate-800/80 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700/60"
-        >
-          <LogOut size={15} />
-          <span>Cerrar Sesión Completa</span>
-        </button>
+        <div className="space-y-2 pt-2 border-t border-slate-800/80">
+          <button
+            type="button"
+            onClick={logoutUser}
+            className="w-full py-2 text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <Mail size={13} />
+            <span>Ingresar con correo y contraseña</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={logoutUser}
+            className="w-full py-2 px-4 rounded-xl text-slate-400 hover:text-rose-300 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <LogOut size={14} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
 
         {/* Encryption footnote */}
         <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
