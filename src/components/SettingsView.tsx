@@ -311,11 +311,11 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Backups: Excel and JSON */}
+      {/* Backups: Excel and Certified Backup */}
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
         <div className="flex items-center gap-2">
-          <Database size={18} className="text-emerald-400" />
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Respaldos & Exportación</h3>
+          <FileText size={18} className="text-emerald-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Auditoría & Descargas Ejecutivas</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -325,7 +325,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <FileSpreadsheet size={16} />
-            <span>Descargar en Excel (.csv)</span>
+            <span>Exportar Libro Contable (.csv)</span>
           </button>
 
           <button
@@ -334,7 +334,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Download size={16} className="text-emerald-400" />
-            <span>Descargar Respaldo JSON</span>
+            <span>Descargar Copia de Seguridad (.json)</span>
           </button>
 
           <input
@@ -351,7 +351,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Upload size={16} className="text-indigo-400" />
-            <span>Restaurar Respaldo JSON</span>
+            <span>Restaurar Copia de Seguridad (.json)</span>
           </button>
         </div>
 
@@ -366,8 +366,8 @@ export const SettingsView: React.FC = () => {
       <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h4 className="text-xs font-bold text-white">Vaciar y Limpiar Todo a Cero</h4>
-            <p className="text-[11px] text-slate-400">Elimina todos los registros locales para reiniciar el libro mayor.</p>
+            <h4 className="text-xs font-bold text-white">Reiniciar Libro Contable a Cero</h4>
+            <p className="text-[11px] text-slate-400">Restablece los saldos y transacciones para iniciar un nuevo ciclo contable.</p>
           </div>
 
           <button
@@ -376,7 +376,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs border border-rose-500/30 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <RotateCcw size={14} />
-            <span>Limpiar Todo a Cero</span>
+            <span>Reiniciar Libro Mayor</span>
           </button>
         </div>
       </div>

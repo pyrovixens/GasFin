@@ -8,9 +8,8 @@ import {
   ArrowRight, 
   ShieldCheck, 
   CheckCircle2, 
-  Database,
   Coins,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 
@@ -74,7 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
 
     if (pinToTest === effectivePin) {
       setErrorMsg(null);
-      setSuccessMsg('¡PIN correcto! Accediendo...');
+      setSuccessMsg('¡PIN verificado! Accediendo...');
       sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
       triggerCelebration();
       setTimeout(() => {
@@ -117,14 +116,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         const res = await loginWithSupabase(cleanEmail, cleanPassword);
         if (!res.success) {
           if (res.error?.includes('rate limit')) {
-            setErrorMsg('Límite de solicitudes alcanzado. Por favor espera unos momentos.');
+            setErrorMsg('Límite de intentos alcanzado. Por favor espera unos instantes.');
           } else {
-            setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu correo electrónico y contraseña.');
+            setErrorMsg(res.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.');
           }
         } else {
           setSavedAuthEmail(cleanEmail);
-          const currentStoredPin = localStorage.getItem('gastfin_user_pin_v1') || res.pin;
-          setSuccessMsg(currentStoredPin ? '¡Sesión y PIN sincronizados desde la nube!' : '¡Sesión iniciada con éxito!');
+          setSuccessMsg('¡Acceso concedido! Cargando estado de cuenta...');
           sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
           triggerCelebration();
           
@@ -136,11 +134,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         // Signup
         const res = await signupWithSupabase(cleanEmail, cleanPassword, displayName.trim());
         if (!res.success) {
-          setErrorMsg(res.error || 'Error al crear la cuenta en el servidor.');
+          setErrorMsg(res.error || 'Error al crear la cuenta financiera.');
         } else {
           setSavedAuthEmail(cleanEmail);
           if (displayName.trim()) setUserName(displayName.trim());
-          setSuccessMsg('¡Cuenta creada con éxito! Tus finanzas ahora están respaldadas en la nube.');
+          setSuccessMsg('¡Cuenta financiera creada con éxito! Bienvenido a GastFin.');
           sessionStorage.setItem('gastfin_unlocked_current_session', 'true');
           triggerCelebration();
           
@@ -150,7 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Ocurrió un error inesperado al conectar.');
+      setErrorMsg(err.message || 'Error de conexión. Verifica tu red e intenta nuevamente.');
     } finally {
       setIsLoading(false);
     }
@@ -178,28 +176,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
       {/* Header Icon & Title */}
       <div className="text-center space-y-2 mb-6">
         <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500/20 via-teal-500/10 to-indigo-500/20 border border-emerald-500/30 flex items-center justify-center shadow-glow-emerald">
-          <Coins className="w-7 h-7 text-emerald-400" />
+          <ShieldCheck className="w-7 h-7 text-emerald-400" />
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black uppercase tracking-wider">
-          <ShieldCheck size={14} className="text-emerald-400" />
-          <span>Acceso Seguro en la Nube</span>
+          <Lock size={12} className="text-emerald-400" />
+          <span>Acceso Bancario Seguro</span>
         </div>
 
         <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
           {supabaseUser 
-            ? 'Tu Cuenta Activa' 
+            ? 'Estado de Cuenta Activo' 
             : authMode === 'pin' 
               ? 'Acceso Rápido con PIN' 
               : authMode === 'login' 
                 ? 'Iniciar Sesión' 
-                : 'Crear Nueva Cuenta'}
+                : 'Crear Cuenta Financiera'}
         </h2>
 
         <p className="text-xs text-slate-400">
           {authMode === 'pin'
-            ? 'Digita tu PIN de 4 dígitos para ingresar a tus finanzas.'
-            : 'Ingresa tu correo electrónico y contraseña para acceder a tus finanzas.'}
+            ? 'Digita tu PIN de 4 dígitos para consultar tus finanzas.'
+            : 'Ingresa tu correo y clave de seguridad para consultar tus registros.'}
         </p>
       </div>
 
@@ -208,14 +206,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Estado:</span>
+              <span className="text-xs text-slate-400">Estado de Seguridad:</span>
               <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400">
                 <CheckCircle2 size={14} />
-                <span>En Línea (Sincronizado)</span>
+                <span>Sesión Protegida y Activa</span>
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Correo Electrónico:</span>
+              <span className="text-xs text-slate-400">Titular de Cuenta:</span>
               <span className="text-xs font-mono font-bold text-white truncate max-w-[200px]">
                 {supabaseUser.email}
               </span>
@@ -223,7 +221,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
             {(userPIN || localStorage.getItem('gastfin_user_pin_v1')) && (
               <div className="flex items-center justify-between pt-1 border-t border-slate-800">
                 <span className="text-xs text-slate-400">Acceso Rápido:</span>
-                <span className="text-xs font-bold text-emerald-300">PIN de 4 dígitos activo</span>
+                <span className="text-xs font-bold text-emerald-300">PIN de 4 dígitos configurado</span>
               </div>
             )}
           </div>
@@ -231,11 +229,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
           <div className="space-y-2">
             <button
               type="button"
-              onClick={syncLocalToCloud}
+              onClick={() => {
+                syncLocalToCloud();
+                triggerCelebration();
+              }}
               className="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-colors border border-slate-700"
             >
-              <Database size={15} className="text-emerald-400" />
-              <span>Forzar Sincronización Inmediata</span>
+              <RefreshCw size={14} className="text-emerald-400" />
+              <span>Actualizar Estado de Cuenta</span>
             </button>
 
             <button
@@ -296,7 +297,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
               disabled={enteredPin.length !== 4}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-glow-emerald transition-all cursor-pointer disabled:opacity-40"
             >
-              Ingresar a GastFin
+              Ingresar al Sistema
             </button>
 
             <button
@@ -304,7 +305,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
               onClick={() => { setAuthMode('login'); setErrorMsg(null); }}
               className="w-full py-2 text-xs text-slate-400 hover:text-white font-semibold transition-colors cursor-pointer"
             >
-              O ingresar con correo electrónico y contraseña
+              O ingresar con correo y contraseña
             </button>
           </div>
         </form>
@@ -343,7 +344,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
           {/* Display Name (Only on Signup) */}
           {authMode === 'signup' && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-300 mb-1">Nombre o Alias</label>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1">Nombre o Titular</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
                 <input
@@ -376,7 +377,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
 
           {/* Password */}
           <div>
-            <label className="block text-[11px] font-bold text-slate-300 mb-1">Contraseña</label>
+            <label className="block text-[11px] font-bold text-slate-300 mb-1">Contraseña de Seguridad</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={15} />
               <input
@@ -409,7 +410,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
                 <div className="w-5 h-5 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
               ) : (
                 <>
-                  <span>{authMode === 'login' ? 'Ingresar a GastFin' : 'Registrar Cuenta'}</span>
+                  <span>{authMode === 'login' ? 'Acceder a mi Cuenta' : 'Registrar Cuenta'}</span>
                   <ArrowRight size={16} />
                 </>
               )}

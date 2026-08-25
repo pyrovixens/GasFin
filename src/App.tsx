@@ -31,37 +31,37 @@ import { BankStatementImporterModal } from './components/BankStatementImporterMo
 import { AssetModal } from './components/AssetModal';
 import { FinancialReportPrintModal } from './components/FinancialReportPrintModal';
 import { PinSetupPromptModal } from './components/PinSetupPromptModal';
-import { Coins } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
   const { activeView, supabaseUser, isAuthLoading } = useFinancial();
 
-  // 1. Initial Cloud Session Verification State
+  // 1. Initial Banking Security Verification State
   if (isAuthLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100 select-none">
         <div className="text-center space-y-4 animate-fade-in p-6">
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 mx-auto flex items-center justify-center shadow-glow-emerald">
-            <Coins size={32} className="text-slate-950 font-black animate-pulse" />
+            <ShieldCheck size={32} className="text-slate-950 font-black animate-pulse" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">GastFin</h1>
-          <p className="text-xs text-slate-400 font-bold">Conectando a la Nube Segura...</p>
+          <p className="text-xs text-slate-400 font-bold">Verificando Credenciales de Seguridad...</p>
         </div>
       </div>
     );
   }
 
-  // 2. Unauthenticated Gatekeeper: Strict Online Login / PIN Screen
+  // 2. Unauthenticated Gatekeeper: Secure Banking Login
   if (!supabaseUser) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 selection:bg-emerald-500 selection:text-white">
-        <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/30 via-slate-950 to-slate-950" />
+        <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/25 via-slate-950 to-slate-950" />
         <AuthModal isFullScreen={true} />
       </div>
     );
   }
 
-  // 3. Authenticated Application
+  // 3. Authenticated Financial Platform
   const renderActiveView = () => {
     switch (activeView) {
       case 'dashboard':
@@ -97,21 +97,21 @@ export const AppContent: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500 selection:text-white transition-colors duration-200">
-      {/* Responsive Left Sidebar (Desktop & Tablet) */}
+      {/* Responsive Left Sidebar */}
       <Sidebar />
 
       {/* Main Content Viewport */}
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden relative">
-        {/* Sticky Executive Navbar */}
+        {/* Executive Navbar */}
         <Navbar />
 
-        {/* Dynamic View Content with Responsive Layout (Mobile / Tablet / PC) */}
+        {/* Dynamic View Content */}
         <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           {renderActiveView()}
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (< 768px) */}
+      {/* Mobile Bottom Navigation Bar */}
       <BottomNavBar />
 
       {/* Floating Scroll To Top Button */}

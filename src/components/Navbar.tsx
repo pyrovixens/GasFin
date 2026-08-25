@@ -8,7 +8,7 @@ import {
   Coins, 
   FileSpreadsheet, 
   Scan, 
-  Cloud, 
+  ShieldCheck, 
   User,
   LogOut,
   Eye,
@@ -109,18 +109,15 @@ export const Navbar: React.FC = () => {
           </button>
         )}
 
-        {/* Cloud Sync Button */}
+        {/* Banking Security Status */}
         <button
+          type="button"
           onClick={() => setIsAuthModalOpen(true)}
-          className={`p-1.5 sm:px-2.5 sm:py-1 rounded-xl border text-xs font-bold transition-all shadow-sm flex items-center gap-1 flex-shrink-0 ${
-            supabaseUser
-              ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/40'
-              : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white hover:bg-slate-700'
-          }`}
-          title={supabaseUser ? `Conectado a la Nube (${supabaseUser.email})` : 'Conectar con la Nube'}
+          className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/40 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+          title="Sesión Segura Activa"
         >
-          <Cloud size={14} className={supabaseUser ? 'text-emerald-400' : 'text-slate-400'} />
-          <span className="hidden 2xl:inline text-[11px]">{supabaseUser ? 'Nube' : 'Sincronizar'}</span>
+          <ShieldCheck size={14} className="text-emerald-400" />
+          <span className="hidden 2xl:inline text-[11px]">Segura</span>
         </button>
 
         {/* OCR Receipt Scanner */}
