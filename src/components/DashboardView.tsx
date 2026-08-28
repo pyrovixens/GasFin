@@ -20,7 +20,8 @@ import {
   Compass,
   FileSpreadsheet,
   User,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -56,7 +57,10 @@ export const DashboardView: React.FC = () => {
     openGoalModal,
     setActiveView,
     assets,
-    subscriptions
+    subscriptions,
+    isNetworkOnline,
+    economicIndicators,
+    refreshEconomicIndicators
   } = useFinancial();
 
   // 50 / 30 / 20 Rule Automatic Calculation
@@ -213,12 +217,58 @@ export const DashboardView: React.FC = () => {
         <div className="flex items-center gap-2 self-start md:self-auto flex-shrink-0">
           <button
             onClick={exportDataToExcel}
-            className="px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center gap-2 shadow-sm"
+            className="px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
             title="Descargar tus datos en formato Excel / CSV"
           >
             <FileSpreadsheet size={16} className="text-emerald-400" />
             <span>Descargar en Excel</span>
           </button>
+        </div>
+      </div>
+
+      {/* REAL-TIME NETWORK ECONOMIC INDICATORS BAR */}
+      <div className="p-4 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-2.5 h-2.5 rounded-full ${isNetworkOnline ? 'bg-emerald-400 shadow-glow-emerald animate-pulse' : 'bg-amber-400'}`} />
+            <span className="text-xs font-black text-white uppercase tracking-wider">
+              {isNetworkOnline ? '🌐 Indicadores Financieros en Red (Al Día)' : '📡 Modo Local / Indicadores en Caché'}
+            </span>
+            <button
+              onClick={refreshEconomicIndicators}
+              className="p-1 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-all cursor-pointer"
+              title="Actualizar cotizaciones en red"
+            >
+              <RefreshCw size={13} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+              <span className="text-slate-400 font-bold">UF</span>
+              <span className="font-mono font-black text-emerald-400">
+                ${economicIndicators.uf?.value ? economicIndicators.uf.value.toLocaleString('es-CL') : '38.450'}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+              <span className="text-slate-400 font-bold">Dólar USD</span>
+              <span className="font-mono font-black text-emerald-400">
+                ${economicIndicators.dolar?.value ? economicIndicators.dolar.value.toLocaleString('es-CL') : '948'}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+              <span className="text-slate-400 font-bold">Euro EUR</span>
+              <span className="font-mono font-black text-teal-400">
+                ${economicIndicators.euro?.value ? economicIndicators.euro.value.toLocaleString('es-CL') : '1.032'}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+              <span className="text-slate-400 font-bold">UTM</span>
+              <span className="font-mono font-black text-indigo-400">
+                ${economicIndicators.utm?.value ? economicIndicators.utm.value.toLocaleString('es-CL') : '66.200'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -36,6 +36,7 @@ export const Navbar: React.FC = () => {
     currentCurrency,
     userName,
     supabaseUser,
+    isNetworkOnline,
     setIsAuthModalOpen,
     setIsCurrencySetupModalOpen,
     setIsDeficitModalOpen,
@@ -130,6 +131,19 @@ export const Navbar: React.FC = () => {
         >
           <ShieldCheck size={14} className="text-emerald-400" />
           <span className="hidden 2xl:inline text-[11px]">Segura</span>
+        </div>
+
+        {/* Network Online Status Badge */}
+        <div
+          className={`p-1.5 sm:px-2.5 sm:py-1 rounded-xl border text-xs font-bold shadow-sm flex items-center gap-1.5 flex-shrink-0 select-none ${
+            isNetworkOnline 
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+              : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+          }`}
+          title={isNetworkOnline ? "Conectado a la Red y Sincronizado en Tiempo Real" : "Modo Local / Sin Conexión"}
+        >
+          <div className={`w-2 h-2 rounded-full ${isNetworkOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+          <span className="hidden xl:inline text-[11px]">{isNetworkOnline ? 'En Red' : 'Offline'}</span>
         </div>
 
         {/* OCR Receipt Scanner */}

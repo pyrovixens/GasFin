@@ -30,6 +30,12 @@ import {
   markPaymentAsNotifiedToday
 } from '../services/notificationService';
 import { 
+  fetchLiveEconomicIndicators, 
+  FALLBACK_INDICATORS, 
+  LiveMarketRates 
+} from '../services/economicIndicatorsService';
+import { networkManager } from '../services/networkManager';
+import { 
   supabase, 
   fetchUserDataFromSupabase, 
   subscribeToUserRealtimeChanges,
@@ -105,7 +111,7 @@ interface FinancialContextType {
   setUserName: (name: string) => void;
   motivationalQuote: string;
 
-  // Supabase Cloud Sync & Multi-user
+  // Supabase Cloud Sync, Network APIs & Multi-user
   supabaseUser: any;
   setSupabaseUser: (user: any) => void;
   loadCloudData: (userId: string) => Promise<{ success: boolean; pin: string | null }>;
@@ -119,6 +125,11 @@ interface FinancialContextType {
   signupWithSupabase: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   logoutSupabase: () => Promise<void>;
   syncLocalToCloud: () => Promise<void>;
+
+  // Live Network & Real-Time Economic APIs
+  isNetworkOnline: boolean;
+  economicIndicators: LiveMarketRates;
+  refreshEconomicIndicators: () => Promise<void>;
 
   // Currency & Permanent Selection
   currentCurrency: CurrencyConfig;
@@ -272,6 +283,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
     return localStorage.getItem('gastfin_privacy_v1') === 'true';
+  });
+
+  // Live Network Status & Real-time Economic Indicators
+  const [isNetworkOnline, setIsNetworkOnline] = useState<boolean>(() => networkManager.getIsOnline());
+  const [economicIndicators, setEconomicIndicators] = useState<LiveMarketRates>(() => {
+    try {
+      const cached = localStorage.getItem('gastfin_economic_indicators_v1');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return FALLBACK_INDICATORS;
   });
 
   const [isAppUnlocked, setIsAppUnlocked] = useState<boolean>(() => {
@@ -1587,9 +1608,21 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => unsubscribe();
   }, [supabaseUser]);
 
+  // Refresh live financial indicators from network APIs
+  const refreshEconomicIndicators = async () => {
+    try {
+      const data = await fetchLiveEconomicIndicators();
+      setEconomicIndicators(data);
+    } catch (e) {
+      console.warn('Indicators fetch error:', e);
+    }
+  };
+
   // Automatic online reconnect & background cloud synchronization
   useEffect(() => {
     const handleOnlineSync = () => {
+      setIsNetworkOnline(true);
+      refreshEconomicIndicators();
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           setSupabaseUser(session.user);
@@ -1598,8 +1631,31 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       });
     };
+
+    const handleOfflineSync = () => {
+      setIsNetworkOnline(false);
+    };
+
+    const unsubscribe = networkManager.subscribe((online) => {
+      setIsNetworkOnline(online);
+      if (online) {
+        handleOnlineSync();
+      }
+    });
+
     window.addEventListener('online', handleOnlineSync);
-    return () => window.removeEventListener('online', handleOnlineSync);
+    window.addEventListener('offline', handleOfflineSync);
+
+    // Initial indicators load & periodic refresh (every 15 min)
+    refreshEconomicIndicators();
+    const interval = setInterval(refreshEconomicIndicators, 15 * 60 * 1000);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', handleOnlineSync);
+      window.removeEventListener('offline', handleOfflineSync);
+      clearInterval(interval);
+    };
   }, []);
 
   // Sync with LocalStorage
@@ -1771,6 +1827,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         signupWithSupabase,
         logoutSupabase,
         syncLocalToCloud,
+        isNetworkOnline,
+        economicIndicators,
+        refreshEconomicIndicators,
         currentCurrency,
         setCurrency,
         isCurrencySetupModalOpen,
