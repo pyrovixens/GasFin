@@ -7,6 +7,30 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Environment variables and secrets (Strict Security Protection)
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+
+# Security credentials and keys
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+*.id_rsa
+*.id_dsa
+secrets.json
+credentials.json
+*.keystore
+*.jks
+
 # Dependencies
 node_modules
 dist-ssr
@@ -30,4 +54,5 @@ builds/windows-pc/*.exe
 builds/windows-pc/*.blockmap
 builds/android-apk/app/build
 builds/android-apk/.gradle
+
 

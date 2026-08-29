@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useFinancial } from '../context/FinancialContext';
 import { supabase } from '../services/supabase';
+import { timingSafeEqual, securityRateLimiter, maskEmail } from '../services/securityService';
 
 interface AuthModalProps {
   isFullScreen?: boolean;
@@ -63,11 +64,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
 
   if (!isFullScreen && !isAuthModalOpen) return null;
 
-  // Handle Quick PIN Login: verifies PIN, loads cloud data, and enters immediately
+  // Handle Quick PIN Login: verifies PIN with rate limiting, loads cloud data, and enters immediately
   const processPinCheck = async (pinToTest: string) => {
     if (!effectivePin) return;
 
-    if (pinToTest === effectivePin) {
+    // Check rate limit
+    const lockStatus = securityRateLimiter.isLocked('pin_auth');
+    if (lockStatus.locked) {
+      setErrorMsg(`Demasiados intentos fallidos. Por seguridad, espera ${lockStatus.waitSeconds} segundos.`);
+      setEnteredPin('');
+      return;
+    }
+
+    if (timingSafeEqual(pinToTest, effectivePin)) {
+      securityRateLimiter.recordSuccess('pin_auth');
       setErrorMsg(null);
       setSuccessMsg('¡PIN verificado! Accediendo...');
       
@@ -85,7 +95,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isFullScreen = false }) =>
       unlockApp();
       triggerCelebration();
     } else {
-      setErrorMsg('PIN incorrecto. Intenta de nuevo o ingresa con contraseña.');
+      securityRateLimiter.recordFailure('pin_auth', 5, 30000);
+      const updatedLock = securityRateLimiter.isLocked('pin_auth');
+      if (updatedLock.locked) {
+        setErrorMsg(`Demasiados intentos fallidos. Bloqueado temporalmente por ${updatedLock.waitSeconds}s.`);
+      } else {
+        setErrorMsg('PIN incorrecto. Intenta de nuevo o ingresa con contraseña.');
+      }
       setEnteredPin('');
     }
   };

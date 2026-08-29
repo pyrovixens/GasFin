@@ -36,6 +36,11 @@ import {
 } from '../services/economicIndicatorsService';
 import { networkManager } from '../services/networkManager';
 import { 
+  sanitizeText, 
+  sanitizeObject, 
+  validateEnvironmentSecurity 
+} from '../services/securityService';
+import { 
   supabase, 
   fetchUserDataFromSupabase, 
   subscribeToUserRealtimeChanges,
@@ -1092,12 +1097,17 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Default metrics are based on the selected monthly context
   const metrics = monthlyMetrics;
 
-  // Transaction CRUD
+  // Transaction CRUD with XSS & Injection Sanitization
   const addTransaction = (tx: Omit<Transaction, 'id'>) => {
     const now = new Date();
     const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     const newTx: Transaction = {
       ...tx,
+      description: sanitizeText(tx.description),
+      category: sanitizeText(tx.category),
+      notes: tx.notes ? sanitizeText(tx.notes) : undefined,
+      vendorOrClient: tx.vendorOrClient ? sanitizeText(tx.vendorOrClient) : undefined,
+      tags: Array.isArray(tx.tags) ? tx.tags.map(t => sanitizeText(t)) : undefined,
       date: tx.date || now.toISOString().split('T')[0],
       time: tx.time || currentTimeStr,
       createdAt: tx.createdAt || now.toISOString(),
@@ -1111,7 +1121,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
     setTransactions(prev => prev.map(t => {
       if (t.id === id) {
-        const res = { ...t, ...updated };
+        const sanitizedUpdated: Partial<Transaction> = {
+          ...updated,
+          ...(updated.description ? { description: sanitizeText(updated.description) } : {}),
+          ...(updated.category ? { category: sanitizeText(updated.category) } : {}),
+          ...(updated.notes ? { notes: sanitizeText(updated.notes) } : {}),
+          ...(updated.vendorOrClient ? { vendorOrClient: sanitizeText(updated.vendorOrClient) } : {}),
+          ...(Array.isArray(updated.tags) ? { tags: updated.tags.map(t => sanitizeText(t)) } : {}),
+        };
+        const res = { ...t, ...sanitizedUpdated };
         if (supabaseUser) syncTransactionToSupabase(res, supabaseUser.id);
         return res;
       }
@@ -1124,10 +1142,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (supabaseUser) deleteTransactionFromSupabase(id, supabaseUser.id);
   };
 
-  // Debt CRUD
+  // Debt CRUD with Input Sanitization
   const addDebt = (debt: Omit<Debt, 'id'>) => {
     const newDebt: Debt = {
       ...debt,
+      name: sanitizeText(debt.name),
+      creditor: sanitizeText(debt.creditor),
+      notes: debt.notes ? sanitizeText(debt.notes) : undefined,
       id: `debt-${Date.now()}`,
     };
     setDebts(prev => [...prev, newDebt]);
@@ -1138,7 +1159,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateDebt = (id: string, updated: Partial<Debt>) => {
     setDebts(prev => prev.map(d => {
       if (d.id === id) {
-        const res = { ...d, ...updated };
+        const sanitizedUpdated: Partial<Debt> = {
+          ...updated,
+          ...(updated.name ? { name: sanitizeText(updated.name) } : {}),
+          ...(updated.creditor ? { creditor: sanitizeText(updated.creditor) } : {}),
+          ...(updated.notes ? { notes: sanitizeText(updated.notes) } : {}),
+        };
+        const res = { ...d, ...sanitizedUpdated };
         if (supabaseUser) syncDebtToSupabase(res, supabaseUser.id);
         return res;
       }
@@ -1185,10 +1212,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Goal CRUD
+  // Goal CRUD with Input Sanitization
   const addGoal = (goal: Omit<Goal, 'id' | 'createdAt'>) => {
     const newGoal: Goal = {
       ...goal,
+      title: sanitizeText(goal.title),
+      notes: goal.notes ? sanitizeText(goal.notes) : undefined,
       id: `goal-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
@@ -1200,7 +1229,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateGoal = (id: string, updated: Partial<Goal>) => {
     setGoals(prev => prev.map(g => {
       if (g.id === id) {
-        const res = { ...g, ...updated };
+        const sanitizedUpdated: Partial<Goal> = {
+          ...updated,
+          ...(updated.title ? { title: sanitizeText(updated.title) } : {}),
+          ...(updated.notes ? { notes: sanitizeText(updated.notes) } : {}),
+        };
+        const res = { ...g, ...sanitizedUpdated };
         if (supabaseUser) syncGoalToSupabase(res, supabaseUser.id);
         return res;
       }

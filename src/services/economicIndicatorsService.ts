@@ -2,6 +2,8 @@
 // GastFin - Live Network Economic & Currency API Service
 // ==========================================
 
+import { safeFetch } from './apiClient';
+
 export interface EconomicIndicator {
   code: string;
   name: string;
@@ -59,17 +61,12 @@ export const fetchLiveEconomicIndicators = async (): Promise<LiveMarketRates> =>
     }
   } catch {}
 
-  // 2. Fetch from mindicador.cl and open.er-api.com concurrently in browser runtime
+  // 2. Safe concurrent fetch from mindicador.cl and open.er-api.com
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-    const [clRes, globalRes] = await Promise.allSettled([
-      fetch('https://mindicador.cl/api', { signal: controller.signal }),
-      fetch('https://open.er-api.com/v6/latest/USD', { signal: controller.signal }),
+    const [clRes, globalRes] = await Promise.all([
+      safeFetch<any>('https://mindicador.cl/api', { timeoutMs: 6000, retries: 1 }),
+      safeFetch<any>('https://open.er-api.com/v6/latest/USD', { timeoutMs: 6000, retries: 1 }),
     ]);
-
-    clearTimeout(timeoutId);
 
     let ufVal = 38450;
     let dolarVal = 948;
@@ -78,8 +75,8 @@ export const fetchLiveEconomicIndicators = async (): Promise<LiveMarketRates> =>
     let ipcVal = 0.7;
     let isLiveSuccess = false;
 
-    if (clRes.status === 'fulfilled' && clRes.value.ok) {
-      const clData = await clRes.value.json();
+    if (clRes.data) {
+      const clData = clRes.data;
       if (clData.uf?.valor) ufVal = clData.uf.valor;
       if (clData.dolar?.valor) dolarVal = clData.dolar.valor;
       if (clData.euro?.valor) euroVal = clData.euro.valor;
@@ -89,12 +86,9 @@ export const fetchLiveEconomicIndicators = async (): Promise<LiveMarketRates> =>
     }
 
     let ratesToUSD = { ...FALLBACK_INDICATORS.ratesToUSD };
-    if (globalRes.status === 'fulfilled' && globalRes.value.ok) {
-      const globalData = await globalRes.value.json();
-      if (globalData.rates) {
-        ratesToUSD = { ...ratesToUSD, ...globalData.rates };
-        isLiveSuccess = true;
-      }
+    if (globalRes.data && globalRes.data.rates) {
+      ratesToUSD = { ...ratesToUSD, ...globalRes.data.rates };
+      isLiveSuccess = true;
     }
 
     const liveData: LiveMarketRates = {
