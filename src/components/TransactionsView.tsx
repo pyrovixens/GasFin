@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   Filter, 
+  ChevronLeft,
+  ChevronRight,
   ArrowUpRight, 
   ArrowDownRight, 
   Trash2, 
@@ -28,7 +30,13 @@ export const TransactionsView: React.FC = () => {
     deleteTransaction, 
     openTransactionModal,
     exportDataToExcel,
-    setIsCSVImporterOpen
+    setIsCSVImporterOpen,
+    selectedMonth,
+    setSelectedMonth,
+    availableMonths,
+    goToPreviousMonth,
+    goToNextMonth,
+    goToCurrentMonth
   } = useFinancial();
 
   // Helper for bank-style date and time formatting
@@ -57,9 +65,12 @@ export const TransactionsView: React.FC = () => {
     return Array.from(set);
   }, [transactions]);
 
-  // Filtered transactions
+  // Filtered transactions by month, search, type, category, and payment method
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
+      const matchesMonth = selectedMonth === 'all' || (t.date && t.date.startsWith(selectedMonth));
+      if (!matchesMonth) return false;
+
       const desc = t.description || '';
       const cat = t.category || '';
       const vendor = t.vendorOrClient || '';
@@ -81,19 +92,19 @@ export const TransactionsView: React.FC = () => {
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(`${b.date}T${b.time || '12:00:00'}`).getTime();
       return timeB - timeA;
     });
-  }, [transactions, searchTerm, typeFilter, categoryFilter, methodFilter]);
+  }, [transactions, selectedMonth, searchTerm, typeFilter, categoryFilter, methodFilter]);
 
-  // Totals for filtered view
+  // Totals and counts for the selected monthly view
   const totals = useMemo(() => {
-    const income = filteredTransactions
-      .filter(t => t.type === 'income')
-      .reduce((acc, t) => acc + t.amount, 0);
-    const expense = filteredTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, t) => acc + t.amount, 0);
+    const incomeTxs = filteredTransactions.filter(t => t.type === 'income');
+    const expenseTxs = filteredTransactions.filter(t => t.type === 'expense');
+    const income = incomeTxs.reduce((acc, t) => acc + t.amount, 0);
+    const expense = expenseTxs.reduce((acc, t) => acc + t.amount, 0);
     return {
       income,
+      incomeCount: incomeTxs.length,
       expense,
+      expenseCount: expenseTxs.length,
       balance: income - expense,
       count: filteredTransactions.length
     };
@@ -119,7 +130,7 @@ export const TransactionsView: React.FC = () => {
               </span>
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Cartola & Libro de Movimientos</h1>
-                <p className="text-xs text-slate-400 mt-0.5">Auditoría contable y registro en tiempo real de ingresos y gastos.</p>
+                <p className="text-xs text-slate-400 mt-0.5">Control contable mensual, arqueo de ingresos y registro en tiempo real.</p>
               </div>
             </div>
           </div>
@@ -165,8 +176,75 @@ export const TransactionsView: React.FC = () => {
           </div>
         </div>
 
+        {/* MONTHLY ACCOUNTING PERIOD SELECTOR & SWITCHER */}
+        <div className="mt-5 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={goToPreviousMonth}
+              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+              title="Mes Anterior"
+            >
+              <ChevronLeft size={16} className="text-emerald-400" />
+              <span className="hidden sm:inline">Anterior</span>
+            </button>
+
+            <div className="relative flex-1 sm:flex-initial">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" size={15} />
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full sm:w-auto pl-8 pr-8 py-2 rounded-xl bg-slate-900 border border-emerald-500/40 text-white font-bold text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-sm"
+              >
+                {availableMonths.map(m => (
+                  <option key={m.value} value={m.value}>
+                    {m.label} ({m.count} {m.count === 1 ? 'movimiento' : 'movimientos'})
+                  </option>
+                ))}
+                <option value="all">📂 Todos los Meses (Histórico)</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={goToNextMonth}
+              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+              title="Mes Siguiente"
+            >
+              <span className="hidden sm:inline">Siguiente</span>
+              <ChevronRight size={16} className="text-emerald-400" />
+            </button>
+          </div>
+
+          {/* Quick Period Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={goToCurrentMonth}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                selectedMonth === availableMonths[0]?.value
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-glow-emerald'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+            >
+              🟢 Mes Actual
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMonth('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                selectedMonth === 'all'
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-glow-emerald'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+              }`}
+            >
+              📂 Todo el Historial
+            </button>
+          </div>
+        </div>
+
         {/* Search & Multi Filters Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -221,27 +299,60 @@ export const TransactionsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick KPI Bar for Filtered Results */}
-        <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-800 text-center">
-          <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-[11px] font-semibold text-slate-400">Ingresos Filtrados</span>
-            <p className="text-sm sm:text-base font-black text-emerald-400 mt-0.5">
+        {/* Monthly Accounting KPI Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800 text-left">
+          <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Ingresos del Mes</span>
+              <ArrowUpRight size={15} className="text-emerald-400" />
+            </div>
+            <p className="text-base sm:text-lg font-black text-emerald-400 mt-1">
               +{formatMoney(totals.income)}
             </p>
+            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+              {totals.incomeCount} {totals.incomeCount === 1 ? 'ingreso registrado' : 'ingresos registrados'}
+            </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-[11px] font-semibold text-slate-400">Gastos Filtrados</span>
-            <p className="text-sm sm:text-base font-black text-rose-400 mt-0.5">
+          <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Gastos del Mes</span>
+              <ArrowDownRight size={15} className="text-rose-400" />
+            </div>
+            <p className="text-base sm:text-lg font-black text-rose-400 mt-1">
               -{formatMoney(totals.expense)}
             </p>
+            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+              {totals.expenseCount} {totals.expenseCount === 1 ? 'gasto registrado' : 'gastos registrados'}
+            </span>
           </div>
 
-          <div className="p-3 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <span className="text-[11px] font-semibold text-slate-400">Balance Contable</span>
-            <p className={`text-sm sm:text-base font-black mt-0.5 ${totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Balance Neto</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${totals.balance >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                {totals.balance >= 0 ? 'Superávit' : 'Déficit'}
+              </span>
+            </div>
+            <p className={`text-base sm:text-lg font-black mt-1 ${totals.balance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               {formatMoney(totals.balance)}
             </p>
+            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+              Flujo libre del periodo
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Cartola</span>
+              <Clock size={15} className="text-sky-400" />
+            </div>
+            <p className="text-base sm:text-lg font-black text-white mt-1">
+              {totals.count} {totals.count === 1 ? 'movimiento' : 'movimientos'}
+            </p>
+            <span className="text-[10px] text-emerald-400 font-semibold mt-0.5">
+              {selectedMonth === 'all' ? 'Todo el histórico' : 'En el periodo mensual'}
+            </span>
           </div>
         </div>
 

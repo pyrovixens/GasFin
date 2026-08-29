@@ -13,15 +13,17 @@ import {
   CheckCircle2, 
   Plus, 
   ChevronRight,
-  ShieldCheck,
-  Zap,
-  Activity,
-  FilePlus,
-  Compass,
-  FileSpreadsheet,
-  User,
-  Clock,
-  RefreshCw
+  ChevronLeft,
+  Calendar,
+  ShieldCheck, 
+  Zap, 
+  Activity, 
+  FilePlus, 
+  Compass, 
+  FileSpreadsheet, 
+  User, 
+  Clock, 
+  RefreshCw 
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -60,8 +62,33 @@ export const DashboardView: React.FC = () => {
     subscriptions,
     isNetworkOnline,
     economicIndicators,
-    refreshEconomicIndicators
+    refreshEconomicIndicators,
+    selectedMonth,
+    setSelectedMonth,
+    availableMonths,
+    goToPreviousMonth,
+    goToNextMonth,
+    goToCurrentMonth
   } = useFinancial();
+
+  // Filtered transactions for the selected month
+  const currentMonthTxs = useMemo(() => {
+    if (selectedMonth === 'all') return transactions;
+    return transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
+  }, [transactions, selectedMonth]);
+
+  // Monthly Counts of transactions, income, and expenses
+  const monthlyCounts = useMemo(() => {
+    const incomes = currentMonthTxs.filter(t => t.type === 'income' && t.status === 'completed');
+    const expenses = currentMonthTxs.filter(t => t.type === 'expense' && t.status === 'completed');
+    return {
+      total: currentMonthTxs.length,
+      incomeCount: incomes.length,
+      expenseCount: expenses.length,
+      totalIncome: incomes.reduce((acc, t) => acc + t.amount, 0),
+      totalExpense: expenses.reduce((acc, t) => acc + t.amount, 0)
+    };
+  }, [currentMonthTxs]);
 
   // 50 / 30 / 20 Rule Automatic Calculation
   const rule503020 = useMemo(() => {
@@ -69,7 +96,7 @@ export const DashboardView: React.FC = () => {
     let needs = 0;
     let wants = 0;
 
-    transactions.filter(t => t.type === 'expense').forEach(t => {
+    currentMonthTxs.filter(t => t.type === 'expense').forEach(t => {
       const cat = t.category.toLowerCase();
       if (cat.includes('arriendo') || cat.includes('super') || cat.includes('luz') || cat.includes('agua') || cat.includes('gas') || cat.includes('transporte') || cat.includes('salud') || cat.includes('farmacia') || cat.includes('servicios')) {
         needs += t.amount;
@@ -101,19 +128,19 @@ export const DashboardView: React.FC = () => {
 
   // Monthly Cash Flow Chart Data
   const monthlyData = useMemo(() => {
-    if (transactions.length === 0) {
+    if (currentMonthTxs.length === 0) {
       return [];
     }
 
     return [
       { name: 'Periodo Actual', Ingresos: metrics.totalIncome, Gastos: metrics.totalExpense, FlujoNeto: metrics.netCashFlow },
     ];
-  }, [metrics, transactions]);
+  }, [metrics, currentMonthTxs]);
 
-  // Expenses by Category for Pie Chart
+  // Expenses by Category for Pie Chart (Selected Month)
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    transactions
+    currentMonthTxs
       .filter(t => t.type === 'expense')
       .forEach(t => {
         map[t.category] = (map[t.category] || 0) + t.amount;
@@ -124,12 +151,12 @@ export const DashboardView: React.FC = () => {
       value,
       color: CATEGORY_COLORS[name] || '#94A3B8',
     })).sort((a, b) => b.value - a.value);
-  }, [transactions]);
+  }, [currentMonthTxs]);
 
-  // Budget Limits Warning / Exceeded Alerts
+  // Budget Limits Warning / Exceeded Alerts (Selected Month)
   const budgetAlerts = useMemo(() => {
     const expenseMap: Record<string, number> = {};
-    transactions
+    currentMonthTxs
       .filter(t => t.type === 'expense')
       .forEach(t => {
         expenseMap[t.category] = (expenseMap[t.category] || 0) + t.amount;
@@ -351,6 +378,70 @@ export const DashboardView: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* MONTHLY ACCOUNTING PERIOD SELECTOR IN DASHBOARD */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-card-soft flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={goToPreviousMonth}
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+            title="Mes Anterior"
+          >
+            <ChevronLeft size={16} className="text-emerald-400" />
+            <span className="hidden sm:inline">Mes Anterior</span>
+          </button>
+
+          <div className="relative flex-1 sm:flex-initial">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" size={15} />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full sm:w-auto pl-8 pr-8 py-2.5 rounded-xl bg-slate-950 border border-emerald-500/50 text-white font-black text-xs sm:text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-inner"
+            >
+              {availableMonths.map(m => (
+                <option key={m.value} value={m.value}>
+                  📅 {m.label} ({m.count} {m.count === 1 ? 'movimiento' : 'movimientos'})
+                </option>
+              ))}
+              <option value="all">📂 Todos los Meses (Histórico)</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToNextMonth}
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+            title="Mes Siguiente"
+          >
+            <span className="hidden sm:inline">Mes Siguiente</span>
+            <ChevronRight size={16} className="text-emerald-400" />
+          </button>
+        </div>
+
+        {/* Quick Month Filter Buttons and Count Badge */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-bold text-slate-300 flex items-center gap-2">
+            <span className="text-emerald-400 font-extrabold">{monthlyCounts.incomeCount} {monthlyCounts.incomeCount === 1 ? 'ingreso' : 'ingresos'}</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-rose-400 font-extrabold">{monthlyCounts.expenseCount} {monthlyCounts.expenseCount === 1 ? 'gasto' : 'gastos'}</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-white font-extrabold">{monthlyCounts.total} {monthlyCounts.total === 1 ? 'movimiento' : 'movimientos'}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={goToCurrentMonth}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              selectedMonth === availableMonths[0]?.value
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-glow-emerald font-black'
+                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+          >
+            🟢 Mes Actual
+          </button>
+        </div>
+      </div>
 
       {/* TOP KPI CARDS ROW (5 Columns / Responsive Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

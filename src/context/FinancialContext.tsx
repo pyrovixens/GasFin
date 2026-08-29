@@ -145,7 +145,16 @@ interface FinancialContextType {
   formatInputLive: (valStr: string | number | undefined | null) => string;
   parseRawFromDisplay: (valStr: string | number | undefined | null) => number;
 
-  // Transactions
+  // Transactions & Monthly Cartola Accounting
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
+  availableMonths: Array<{ value: string; label: string; count: number; income: number; expense: number }>;
+  monthlyTransactions: Transaction[];
+  monthlyMetrics: FinancialMetrics;
+  overallMetrics: FinancialMetrics;
+  goToPreviousMonth: () => void;
+  goToNextMonth: () => void;
+  goToCurrentMonth: () => void;
   transactions: Transaction[];
   addTransaction: (tx: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
@@ -325,6 +334,57 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const [isCurrencySetupModalOpen, setIsCurrencySetupModalOpen] = useState<boolean>(false);
+
+  // Monthly Period Selection & Cartola Accounting
+  const getCurrentMonthKey = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = (now.getMonth() + 1).toString().padStart(2, '0');
+    return `${y}-${m}`;
+  };
+
+  const [selectedMonth, setSelectedMonthState] = useState<string>(() => {
+    return localStorage.getItem('gastfin_selected_month_v1') || getCurrentMonthKey();
+  });
+
+  const setSelectedMonth = (month: string) => {
+    setSelectedMonthState(month);
+    try {
+      localStorage.setItem('gastfin_selected_month_v1', month);
+    } catch {}
+  };
+
+  const goToPreviousMonth = () => {
+    const target = selectedMonth === 'all' ? getCurrentMonthKey() : selectedMonth;
+    const [yStr, mStr] = target.split('-');
+    let y = parseInt(yStr, 10);
+    let m = parseInt(mStr, 10);
+    m -= 1;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
+    const newMonth = `${y}-${m.toString().padStart(2, '0')}`;
+    setSelectedMonth(newMonth);
+  };
+
+  const goToNextMonth = () => {
+    const target = selectedMonth === 'all' ? getCurrentMonthKey() : selectedMonth;
+    const [yStr, mStr] = target.split('-');
+    let y = parseInt(yStr, 10);
+    let m = parseInt(mStr, 10);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    const newMonth = `${y}-${m.toString().padStart(2, '0')}`;
+    setSelectedMonth(newMonth);
+  };
+
+  const goToCurrentMonth = () => {
+    setSelectedMonth(getCurrentMonthKey());
+  };
 
   // Data Collections
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -930,13 +990,61 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return parseCurrencyInputRaw(valStr, currentCurrency?.code || 'CLP');
   };
 
-  // Metrics
-  const metrics = useMemo<FinancialMetrics>(() => {
-    const totalIncome = transactions
+  // Available Months with accounting counts & totals
+  const MONTH_NAMES_ES = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const availableMonths = useMemo(() => {
+    const monthMap: Record<string, { count: number; income: number; expense: number }> = {};
+    const currMonth = getCurrentMonthKey();
+    monthMap[currMonth] = { count: 0, income: 0, expense: 0 };
+
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        const mKey = t.date.slice(0, 7);
+        if (!monthMap[mKey]) {
+          monthMap[mKey] = { count: 0, income: 0, expense: 0 };
+        }
+        monthMap[mKey].count += 1;
+        if (t.type === 'income' && t.status === 'completed') {
+          monthMap[mKey].income += t.amount;
+        } else if (t.type === 'expense' && t.status === 'completed') {
+          monthMap[mKey].expense += t.amount;
+        }
+      }
+    });
+
+    const keys = Object.keys(monthMap).sort().reverse();
+    return keys.map(k => {
+      const [yStr, mStr] = k.split('-');
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10);
+      const label = `${MONTH_NAMES_ES[(m || 1) - 1]} ${y}`;
+      return {
+        value: k,
+        label,
+        count: monthMap[k].count,
+        income: monthMap[k].income,
+        expense: monthMap[k].expense,
+      };
+    });
+  }, [transactions]);
+
+  // Monthly Filtered Transactions
+  const monthlyTransactions = useMemo(() => {
+    if (selectedMonth === 'all') return transactions;
+    return transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
+  }, [transactions, selectedMonth]);
+
+  // Helper to compute Metrics for any transaction list
+  const calculateMetricsForList = (txList: Transaction[]): FinancialMetrics => {
+    const totalIncome = txList
       .filter(t => t.type === 'income' && t.status === 'completed')
       .reduce((acc, t) => acc + t.amount, 0);
 
-    const totalExpense = transactions
+    const totalExpense = txList
       .filter(t => t.type === 'expense' && t.status === 'completed')
       .reduce((acc, t) => acc + t.amount, 0);
 
@@ -969,7 +1077,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       liquidityRatio,
       runwayMonths,
     };
+  };
+
+  // Overall (All-time) Metrics
+  const overallMetrics = useMemo<FinancialMetrics>(() => {
+    return calculateMetricsForList(transactions);
   }, [transactions, debts]);
+
+  // Monthly Metrics for Selected Month
+  const monthlyMetrics = useMemo<FinancialMetrics>(() => {
+    return calculateMetricsForList(monthlyTransactions);
+  }, [monthlyTransactions, debts]);
+
+  // Default metrics are based on the selected monthly context
+  const metrics = monthlyMetrics;
 
   // Transaction CRUD
   const addTransaction = (tx: Omit<Transaction, 'id'>) => {
@@ -1840,6 +1961,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         formatPercent,
         formatInputLive,
         parseRawFromDisplay,
+        selectedMonth,
+        setSelectedMonth,
+        availableMonths,
+        monthlyTransactions,
+        monthlyMetrics,
+        overallMetrics,
+        goToPreviousMonth,
+        goToNextMonth,
+        goToCurrentMonth,
         transactions,
         addTransaction,
         updateTransaction,
