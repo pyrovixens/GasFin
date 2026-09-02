@@ -40,7 +40,7 @@ export interface Debt {
   userId?: string;
 }
 
-export type GoalCategory = 'emergency_fund' | 'expansion' | 'equipment' | 'investment' | 'tax_reserve' | 'personal';
+export type GoalCategory = 'emergency_fund' | 'expansion' | 'equipment' | 'investment' | 'tax_reserve' | 'personal' | 'savings';
 
 export interface Goal {
   id: string;

@@ -1107,7 +1107,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       category: sanitizeText(tx.category),
       notes: tx.notes ? sanitizeText(tx.notes) : undefined,
       vendorOrClient: tx.vendorOrClient ? sanitizeText(tx.vendorOrClient) : undefined,
-      tags: Array.isArray(tx.tags) ? tx.tags.map(t => sanitizeText(t)) : undefined,
+      tags: Array.isArray(tx.tags) ? tx.tags.map(t => sanitizeText(t)) : [],
       date: tx.date || now.toISOString().split('T')[0],
       time: tx.time || currentTimeStr,
       createdAt: tx.createdAt || now.toISOString(),
