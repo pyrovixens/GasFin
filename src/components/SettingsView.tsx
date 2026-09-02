@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { 
   Settings, 
-  Download, 
   Upload, 
   RotateCcw, 
   Coins, 
@@ -34,7 +33,6 @@ export const SettingsView: React.FC = () => {
     setCurrency, 
     lockAndSetCurrencyAndName, 
     unlockCurrencySelector, 
-    exportDataAsJSON, 
     exportDataToExcel, 
     importDataFromJSON, 
     clearAllDataToZero, 
@@ -80,7 +78,7 @@ export const SettingsView: React.FC = () => {
       if (success) {
         setImportStatus('¡Datos importados con éxito!');
       } else {
-        setImportStatus('Error al leer el archivo JSON. Verifica el formato.');
+        setImportStatus('Error al leer el archivo de respaldo. Verifica el formato.');
       }
       setTimeout(() => setImportStatus(null), 4000);
     };
@@ -325,16 +323,16 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <FileSpreadsheet size={16} />
-            <span>Exportar Libro Contable (.csv)</span>
+            <span>Exportar Libro Contable (Excel / CSV)</span>
           </button>
 
           <button
             type="button"
-            onClick={exportDataAsJSON}
+            onClick={() => setIsReportPrintModalOpen(true)}
             className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-emerald-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Download size={16} className="text-emerald-400" />
-            <span>Descargar Copia de Seguridad (.json)</span>
+            <FileText size={16} className="text-emerald-400" />
+            <span>Generar Reporte Imprimible / PDF</span>
           </button>
 
           <input
@@ -351,7 +349,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 hover:border-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Upload size={16} className="text-indigo-400" />
-            <span>Restaurar Copia de Seguridad (.json)</span>
+            <span>Restaurar Copia de Respaldo</span>
           </button>
         </div>
 
